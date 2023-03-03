@@ -1,0 +1,19 @@
+.wy-nav-content {
+    max-width: 900px !important;
+}
+
+.wy-table-responsive table td {
+    white-space: normal;
+}
+
+.red {
+    color:red;
+}
+
+.green {
+    color:green;
+}
+
+.blue {
+    color:blue;
+}

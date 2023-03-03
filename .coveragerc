@@ -1,0 +1,29 @@
+[run]
+relative_files = true
+source = ./versioned_collection
+parallel = True
+concurrency =
+    multiprocessing
+    thread
+
+[report]
+omit = *version.py
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    def __str__
+    def __hash__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    raise InvalidCollectionState
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+    @overload
+    if (typing\.)?TYPE_CHECKING:
+
+[html]
+directory = htmlcov
