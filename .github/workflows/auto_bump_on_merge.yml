@@ -1,0 +1,62 @@
+name: Version Auto-Bump
+on:
+  pull_request:
+    branches: [ master ]
+    types: [ closed ]
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Prevent infinite workflows loop.
+  # If the latest commit was an auto-bump or only the GitHub workflows were
+  # updated, don't run this workflow
+  check_latest_commit:
+      runs-on: ubuntu-latest
+      name: Check latest commit
+      outputs:
+        should_run: ${{ steps.should_run.outputs.should_run }}
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v3
+          with:
+            fetch-depth: 2
+            ref: master
+
+        - name: Print Modified Files
+          run: |
+            readarray -t names <<< "$(git diff --name-only HEAD HEAD^)"
+            echo "${names[@]}"  
+
+        - name: Get changed files
+          id: should_run
+          shell: bash
+          run: |
+            readarray -t names <<<"$(git diff --name-only HEAD HEAD^)"
+            should_run=$(python .ci/should_bump_version.py ${names[@]})
+            echo "should_run=${should_run}" >> $GITHUB_OUTPUT
+
+  perform-patch-bump:
+    needs: check_latest_commit
+    if: ${{ (needs.check_latest_commit.outputs.should_run == 'true') && (github.event.pull_request.merged == true) && (contains(github.event.pull_request.labels.*.name, 'bump:patch')) }}
+    secrets: inherit
+    uses: HumanisingAutonomy/versioned_collection/.github/workflows/bump_version.yml@master
+    with:
+      bump_type: bug
+
+  perform-minor-bump:
+    needs: check_latest_commit
+    if: ${{ (needs.check_latest_commit.outputs.should_run == 'true') && (github.event.pull_request.merged == true) && (contains(github.event.pull_request.labels.*.name, 'bump:minor')) }}
+    secrets: inherit
+    uses: HumanisingAutonomy/versioned_collection/.github/workflows/bump_version.yml@master
+    with:
+      bump_type: feature
+      
+  perform-major-bump:
+    needs: check_latest_commit
+    if: ${{ (needs.check_latest_commit.outputs.should_run == 'true') && (github.event.pull_request.merged == true) && (contains(github.event.pull_request.labels.*.name, 'bump:major')) }}
+    secrets: inherit
+    uses: HumanisingAutonomy/versioned_collection/.github/workflows/bump_version.yml@master
+    with:
+      bump_type: major

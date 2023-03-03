@@ -1,0 +1,18 @@
+name: Check PR Labels
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+concurrency:
+  group: ${{ github.ref }}-pr-labels
+  cancel-in-progress: true
+
+jobs:
+  require-version-bump-label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mheap/github-action-required-labels@v3
+        with:
+          mode: exactly
+          count: 1
+          labels: "bump:patch, bump:minor, bump:major, bump:none"

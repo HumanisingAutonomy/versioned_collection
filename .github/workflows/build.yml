@@ -1,0 +1,60 @@
+name: python package nightly
+on:
+  schedule:
+    # Runs "3 am every day" (see https://crontab.guru)
+    - cron: '0 3 * * *'
+
+
+# Ensures that only one deploy task per branch/environment will run at a time.
+concurrency:
+  group: environment-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check_date:
+    runs-on: ubuntu-latest
+    name: Check latest commit
+    outputs:
+      should_run: ${{ steps.should_run.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: print latest_commit
+        run: echo ${{ github.sha }}
+
+      - id: should_run
+        continue-on-error: true
+        name: check latest commit is less than a day
+        if: ${{ github.event_name == 'schedule' }}
+        run: test -z $(git rev-list  --after="24 hours"  ${{ github.sha }}) && echo "should_run=false" >> $GITHUB_OUTPUT
+  nightly-build:
+    runs-on: ubuntu-latest
+    needs: check_date
+    permissions:
+      id-token: write
+      contents: read
+    if: ${{ needs.check_date.outputs.should_run != 'false' }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install setuptools wheel twine build
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: eu-west-2
+          role-to-assume: ${{ secrets.AWS_ROLE_BUILD }}
+          role-session-name: build_versioned_collection
+      - name: Build and publish
+        env:
+          VC_DEV_BUILD: 1
+        run: |
+          aws codeartifact login --tool twine --domain humanising --repository research
+          python -m build --wheel
+          twine upload -r codeartifact dist/*
