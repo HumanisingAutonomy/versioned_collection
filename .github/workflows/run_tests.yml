@@ -24,6 +24,7 @@ concurrency:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v3
       - name: Setup Python
@@ -39,7 +40,6 @@ jobs:
       - name: Get pip cache dir
         id: pip-cache
         run: |
-          python -m pip install --upgrade pip wheel
           echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: pip cache
@@ -78,3 +78,49 @@ jobs:
         with:
           name: python-coverage-comment-action
           path: python-coverage-comment-action.txt
+      
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'push') && (github.event.push.base.repo.branch == 'main') }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Upgrade environment
+        run: |
+          python3 -m pip install --upgrade pip setuptools build
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+      - name: pip cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py', '**/requirements.txt', '**pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        if: ${{ steps.cache-python.outputs.cache-hit != 'true' }}
+        run: |
+          pip -v install -e .
+
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: eu-west-2
+          role-to-assume: ${{ secrets.AWS_ROLE_BUILD }}
+          role-session-name: build_versioned_collection
+
+      - name: Build and publish
+        run: |
+          aws codeartifact login --tool twine --domain humanising --repository research
+          python -m build --wheel
+          twine upload -r codeartifact dist/*

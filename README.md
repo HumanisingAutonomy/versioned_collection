@@ -218,14 +218,14 @@ To build documentation in various formats, you will need
 
 ```bash
 pip install -r docs/requirements.txt
-.scripts/build_docs.sh
+./scripts/build_docs.sh
 ```
 
 This will build the documentation in html format. If other formats are
 preferred, run
 
 ```bash
-.scripts/build_docs.sh <format>
+./scripts/build_docs.sh <format>
 ```
 </details>
 
