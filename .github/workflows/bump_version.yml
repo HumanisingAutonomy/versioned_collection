@@ -22,7 +22,7 @@ jobs:
       - name: Checkout project
         uses: actions/checkout@v3
         with:
-          ref: master
+          ref: main
           persist-credentials: false
 
       - name: Get current version
@@ -59,7 +59,7 @@ jobs:
       - name: Checkout project 2
         uses: actions/checkout@v3
         with:
-          ref: master
+          ref: main
 
       - name: Tag Version
         run: |
