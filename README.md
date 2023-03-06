@@ -3,7 +3,7 @@
 ----
 
 [![Tests](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/run_tests.yml/badge.svg)](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/run_tests.yml)
-[![Docs](https://github.com/HumanisingAutonomy/cerberus/actions/workflows/build_docs.yml/badge.svg)](https://furry-spork-1cbc1088.pages.github.io/)
+[![Docs](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/build_docs.yml/badge.svg)](https://scaling-adventure-g3g7qpg.pages.github.io/)
 [![Coverage](https://github.com/HumanisingAutonomy/versioned_collection/blob/ci/coverage_badge/badge.svg)](https://github.com/HumanisingAutonomy/versioned_collection/blob/ci/coverage_badge/badge.svg)
 
 
@@ -119,8 +119,8 @@ bands_collection = VersionedCollection(
 | `checkout`               | `checkout`                           |                                                                                                                                                                                          |
 | `create_branch`          | `branch`                             | Create a new branch. Branches in  `versioned_collection`  are just pointers to a registered version, as branches in  git are just pointers to commits.                                   |
 | `stash`                  | `stash`                              | Stashes the changes.                                                                                                                                                                     |
-| `stash apply`            | `stash apply`                        | Applies the stashed changes. The  `versioned_collection`  differs from the  git one, and overwrites the new state of the collection with the stashed changes (does not perform a merge). |
-| `stash discard`          | `stash drop`                         | Clears the stashed changes.                                                                                                                                                              |
+| `stash_apply`            | `stash apply`                        | Applies the stashed changes. The  `versioned_collection`  differs from the  git one, and overwrites the new state of the collection with the stashed changes (does not perform a merge). |
+| `stash_discard`          | `stash drop`                         | Clears the stashed changes.                                                                                                                                                              |
 | `delete_version_subtree` | `reset --hard <hash>`                | Removes a version and all the subsequent registered versions.                                                                                                                            |
 | `discard_changes`        | `git reset --hard && git clean -fxd` | Removes all of the unregistered changes.                                                                                                                                                 |
 | `diff`                   | `diff`                               | Computes the  _diffs_ between the current version and another version.                                                                                                                   |
