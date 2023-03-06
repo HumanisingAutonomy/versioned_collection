@@ -1,7 +1,7 @@
 name: Docs
 on:
   workflow_run:
-    workflows: [ "Version Auto-Bump" ]
+    workflows: [ "Tests" ]
     branches: [ main ]
     types:
       - completed

@@ -81,7 +81,7 @@ jobs:
       
   build-and-deploy:
     runs-on: ubuntu-latest
-    if: ${{ (github.event_name == 'push') && (github.event.push.base.repo.branch == 'main') }}
+    if: ${{ (github.event_name == 'push') && (github.ref_type == 'branch') && (github.ref_name == 'main') }}
     steps:
       - uses: actions/checkout@v3
 
