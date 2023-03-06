@@ -18,7 +18,7 @@
 | versioned\_collection/collection/tracking\_collections/replica.py      |       10 |        0 |    100% |           |
 | versioned\_collection/collection/tracking\_collections/stash.py        |       39 |        0 |    100% |           |
 | versioned\_collection/collection/versioned\_collection.py              |      847 |       49 |     94% |217, 418, 449, 462-467, 471-472, 1300-1301, 1310, 1415, 2020, 2029-2033, 2082, 2092, 2099, 2170, 2177, 2196, 2233, 2283, 2297-2332, 2442 |
-| versioned\_collection/errors.py                                        |       22 |        0 |    100% |           |
+| versioned\_collection/errors.py                                        |       20 |        0 |    100% |           |
 | versioned\_collection/listener.py                                      |       94 |       19 |     80% |89, 113, 134, 202-209, 214, 218-229, 235 |
 | versioned\_collection/tree.py                                          |       85 |       12 |     86% |26, 28, 74, 98-99, 113, 152-157, 162 |
 | versioned\_collection/utils/\_\_init\_\_.py                            |        0 |        0 |    100% |           |
@@ -27,7 +27,7 @@
 | versioned\_collection/utils/mongo\_query.py                            |       26 |        7 |     73% | 45, 56-71 |
 | versioned\_collection/utils/multi\_processing.py                       |       12 |        1 |     92% |        10 |
 | versioned\_collection/utils/serialization.py                           |       33 |        8 |     76% |18, 21, 26-31 |
-|                                                              **TOTAL** | **2001** |  **205** | **90%** |           |
+|                                                              **TOTAL** | **1999** |  **205** | **90%** |           |
 
 
 ## Setup coverage badge
