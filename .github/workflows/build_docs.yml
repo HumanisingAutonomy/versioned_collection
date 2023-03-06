@@ -7,8 +7,9 @@ on:
       - completed
 
 permissions:
+  contents: read
+  pages: write
   id-token: write
-  contents: write
 
 concurrency:
   group: ${{ github.ref }}
@@ -54,8 +55,14 @@ jobs:
       - name: Build the docs
         run: bash scripts/build_docs.sh
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/build/html/
+          path: 'docs/build/html/'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
