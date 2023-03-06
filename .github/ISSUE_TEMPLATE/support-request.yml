@@ -1,0 +1,14 @@
+name: 🧐 Support Request
+description: Ask a general question about versoned_collection
+
+body:
+- type: textarea
+  label: Type your question in the area bellow.
+  validations:
+    required: true
+
+
+- type: markdown
+  attributes:
+    value: >
+      Thanks for your interest in versioned_collection 🤓!

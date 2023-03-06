@@ -1,7 +1,4 @@
 """ Custom errors used in `versioned_collection` """
-from typing import List
-
-from bson import ObjectId
 
 
 class CollectionAlreadyInitialised(Exception):

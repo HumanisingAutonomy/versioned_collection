@@ -2003,4 +2003,3 @@ class TestVersionedCollectionPush(_RemoteBaseTest):
         self.assertEqual(self.local.get_log(), self.remote.get_log())
         self.assertEqual(1, self.remote.count_documents({}))
         self.assertEqual(self.DOCUMENT, self.remote.find_one({}))
-

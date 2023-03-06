@@ -26,6 +26,7 @@ body:
       Please provide the following info (and anything else you may find relevant)
       
       OS:
+      Python:
       MongoDB:
       pymongo:
       VersionedCollection:

@@ -956,7 +956,7 @@ class VersionedCollection(Collection):
         if self._current_version == -1:
             if version == 0 and branch == self._current_branch:
                 raise InvalidCollectionVersion(version, branch)
-            
+
             # The current branch is empty, i.e., there are no versions
             # registered on it. Move the HEAD to the base branch and continue
             # the checkout from there.
@@ -1998,8 +1998,8 @@ class VersionedCollection(Collection):
         # Pull from remote
         do_checkout = False
         if diverging_version is None and \
-                (branch == self.branch and not self.is_detached() or
-                 not self._tracked):
+                (branch == self.branch and not self.is_detached()
+                 or not self._tracked):
             do_checkout = True
 
         self._push(remote_collection, self, branch, do_checkout=do_checkout)
