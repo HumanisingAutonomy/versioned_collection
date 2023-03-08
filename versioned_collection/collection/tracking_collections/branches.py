@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional, List, Set
+from typing import Optional, List, Set, Dict, Any
 
 from pymongo.database import Database
 
@@ -134,7 +134,7 @@ class BranchesCollection(_BaseTrackerCollection):
         :param branch: The branch for which the information should be retrieved.
         :return: The branch document.
         """
-        branch_doc = self.find_one({'name': branch})
+        branch_doc: Dict[str, Any] = self.find_one({'name': branch})
         if branch_doc is None:
             raise BranchNotFound(branch)
         branch_doc.pop('_id')

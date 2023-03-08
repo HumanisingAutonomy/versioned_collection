@@ -1,12 +1,14 @@
-from typing import List, Dict, Any, Optional, Tuple, Callable
+from typing import List, Dict, Any, Optional, Tuple, Callable, Union
 
 from bson import ObjectId
+from pymongo.cursor import Cursor
 
 from versioned_collection.utils.data_structures import hashabledict
 
 
-def group_documents_by_id(documents: List[Dict[str, Any]]) \
-        -> Dict[Any, Dict[str, Any]]:
+def group_documents_by_id(
+        documents: Union[List[Dict[str, Any]], Cursor[Dict[str, Any]]]
+) -> Dict[Any, Dict[str, Any]]:
     return dict([
         (doc['_id'], doc) if not isinstance(doc['_id'], dict)
         else (hashabledict(doc['_id']), doc)
