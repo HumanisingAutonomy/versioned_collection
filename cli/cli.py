@@ -17,6 +17,7 @@ from typing import Any, Tuple, Optional, Callable
 from colorama import Fore
 from pymongo import MongoClient
 
+import versioned_collection
 from versioned_collection import VersionedCollection
 from versioned_collection.errors import BranchNotFound
 
@@ -545,6 +546,12 @@ def listen(_):
 
 def cli():
     parser = ArgumentParser(prog='vc')
+
+    parser.add_argument(
+        '-v', '--version', action='store_true', default=False,
+        help='Show the current versioned_collection version installed'
+    )
+
     subparsers = parser.add_subparsers(
         title='These are common VersionedCollection commands',
         metavar='commands'
@@ -812,6 +819,11 @@ def cli():
     listen_parser.set_defaults(handle=listen)
 
     args = parser.parse_args()
+
+    if args.version:
+        print("versioned_collection:", versioned_collection.__version__)
+        return
+
     if hasattr(args, 'handle'):
         args.handle(args)
     else:
