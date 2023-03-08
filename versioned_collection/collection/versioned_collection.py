@@ -527,7 +527,7 @@ class VersionedCollection(Collection):
             credentials=self.__credentials
         )
 
-    def drop(self, session=None) -> None:
+    def drop(self, *args, **kwargs) -> None:
         """ Drops this versioned collection.
 
         In case this collection is being tracked, it also removes all the
@@ -538,7 +538,6 @@ class VersionedCollection(Collection):
             a tracked collection. Calling ``db.drop_collection(name)`` will
             result in the removal of this collection only.
 
-        :param session: a :class:`pymongo.client_session.ClientSession`.
         """
         if self._tracked:
             self._listener.stop()
@@ -547,7 +546,7 @@ class VersionedCollection(Collection):
                 col.drop()
             self._tracked = False
             self._lock_collection.remove_collection(self.name)
-        super().drop()
+        super().drop(*args, **kwargs)
 
     def rename(self, new_name: str, *args, **kwargs) -> VersionedCollection:
         """ Renames this collection and the tracking collections.
@@ -835,7 +834,7 @@ class VersionedCollection(Collection):
 
         client = MongoClient(
             host=address[0],
-            port=address[1],
+            port=int(address[1]),
             username=credentials[0],
             password=credentials[1]
         )
