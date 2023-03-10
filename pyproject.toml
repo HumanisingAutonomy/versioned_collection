@@ -41,12 +41,12 @@ tests = [
 "Source code" = "https://github.com/HumanisingAutonomy/versioned_collection"
 
 [project.scripts]
-vc = "cli.cli:cli"
+vc = "vc_cli.cli:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["versioned_collection*"]
-exclude = ["tests*", "cli*"]
+include = ["versioned_collection*", "vc_cli*"]
+exclude = ["tests*"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}

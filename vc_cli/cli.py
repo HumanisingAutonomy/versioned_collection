@@ -548,7 +548,8 @@ def cli():
     parser = ArgumentParser(prog='vc')
 
     parser.add_argument(
-        '-v', '--version', action='store_true', default=False,
+        '-v', '--version', action='version',
+        version=f'versioned_collection: {versioned_collection.__version__}',
         help='Show the current versioned_collection version installed'
     )
 
@@ -819,10 +820,6 @@ def cli():
     listen_parser.set_defaults(handle=listen)
 
     args = parser.parse_args()
-
-    if args.version:
-        print("versioned_collection:", versioned_collection.__version__)
-        return
 
     if hasattr(args, 'handle'):
         args.handle(args)
