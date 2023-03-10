@@ -10,7 +10,7 @@
 | versioned\_collection/collection/tracking\_collections/base.py         |       23 |        1 |     96% |        40 |
 | versioned\_collection/collection/tracking\_collections/branches.py     |       70 |       18 |     74% |40-44, 62, 93, 118, 160-170, 189 |
 | versioned\_collection/collection/tracking\_collections/conflicts.py    |       16 |        0 |    100% |           |
-| versioned\_collection/collection/tracking\_collections/deltas.py       |      283 |       31 |     89% |72, 88, 112, 200, 250-271, 296-307, 332-339, 342, 426, 454, 623-624, 721-729, 739, 755 |
+| versioned\_collection/collection/tracking\_collections/deltas.py       |      283 |       33 |     88% |72, 88, 112, 200, 250-271, 292-293, 296-307, 332-339, 342, 426, 454, 623-624, 721-729, 739, 755 |
 | versioned\_collection/collection/tracking\_collections/lock.py         |       33 |       10 |     70% |51, 61-65, 73-77, 85-89 |
 | versioned\_collection/collection/tracking\_collections/logs.py         |      268 |       45 |     83% |73, 75, 77, 95, 97, 99, 153-154, 165-171, 188, 217, 238, 257-269, 300, 306, 312, 488, 491-497, 507, 533, 547-552, 574-575, 624 |
 | versioned\_collection/collection/tracking\_collections/metadata.py     |       49 |        1 |     98% |        86 |
@@ -27,7 +27,7 @@
 | versioned\_collection/utils/mongo\_query.py                            |       27 |        7 |     74% | 47, 58-73 |
 | versioned\_collection/utils/multi\_processing.py                       |       12 |        1 |     92% |        10 |
 | versioned\_collection/utils/serialization.py                           |       33 |        8 |     76% |18, 21, 26-31 |
-|                                                              **TOTAL** | **2000** |  **203** | **90%** |           |
+|                                                              **TOTAL** | **2000** |  **205** | **90%** |           |
 
 
 ## Setup coverage badge
