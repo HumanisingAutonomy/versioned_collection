@@ -1,0 +1,41 @@
+name-template: 'VersionedCollection v$RESOLVED_VERSION'
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+      - 'bump:minor'
+      - 'bump:major'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'bump:patch'
+  - title: '⬆️ Dependencies'
+    collapse-after: 3
+    labels:
+      - 'dependencies'
+change-template: '- $TITLE (#$NUMBER)'
+change-title-escapes: '\<*_&'
+version-resolver:
+  major:
+    labels:
+      - 'bump:major'
+  minor:
+    labels:
+      - 'bump:minor'
+  patch:
+    labels:
+      - 'bump:patch'
+  default: patch
+
+template: |
+  ## Changes
+
+  $CHANGES
+
+  -------
+  ### Contributors
+
+  $CONTRIBUTORS

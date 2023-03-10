@@ -4,4 +4,4 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    labels: [ "bump:patch" ]
+    labels: [ "bump:patch", "dependencies" ]
