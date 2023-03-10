@@ -55,6 +55,16 @@ jobs:
         run: |
           pip -v install -e ".[tests]"
 
+      - name: Test CLI installation
+        run: |
+          result=$(vc --version)
+          IFS="=" read name value <<< $(sed -n '2p' VERSION)
+          version_number=${value//[[:space:]]/}
+          expected="versioned_collection: "$version_number
+          if [[ "$result" != "$expected" ]]; then
+            exit 1
+          fi
+          
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.8.0
         with:
