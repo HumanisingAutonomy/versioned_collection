@@ -61,7 +61,7 @@ jobs:
           IFS="=" read name value <<< $(sed -n '2p' VERSION)
           version_number=${value//[[:space:]]/}
           expected="versioned_collection: "$version_number
-          if [[ "$result" == "$expected" ]]; then
+          if [[ "$result" != "$expected" ]]; then
             exit 1
           fi
           
