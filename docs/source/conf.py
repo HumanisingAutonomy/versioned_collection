@@ -50,7 +50,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosectionlabel',
     'sphinxcontrib.pseudocode',
-    'sphinxcontrib.katex'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -97,10 +96,6 @@ numfig = True
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-
-
-# katex options
-katex_prerender = True
 
 
 def setup(app):
