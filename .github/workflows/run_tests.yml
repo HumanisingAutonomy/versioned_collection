@@ -1,11 +1,8 @@
 name: Tests
 on:
   pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
+    branches: [ main ]
+    types: [ opened, reopened, synchronize, closed ]
 
 permissions:
   id-token: write
@@ -24,7 +21,6 @@ concurrency:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v3
       - name: Setup Python
@@ -76,6 +72,7 @@ jobs:
 
       - name: Coverage comment
         id: coverage_comment
+        if: github.event.pull_request.merged == false
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,7 +85,43 @@ jobs:
         with:
           name: python-coverage-comment-action
           path: python-coverage-comment-action.txt
-      
+
+  build-docs-test:
+    runs-on: ubuntu-latest
+    needs: run-tests
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Upgrade environ
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          python -m pip install --upgrade pip wheel
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+      - name: pip cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py', '**/requirements.txt', '**pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install -r docs/requirements.txt
+
+      - name: Build the docs
+        run: bash scripts/build_docs.sh
+
   build-and-deploy:
     runs-on: ubuntu-latest
     needs: run-tests
@@ -125,7 +158,7 @@ jobs:
           pip -v install -e .
           pip install twine
 
-      - uses: aws-actions/configure-aws-credentials@v1
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region: eu-west-2
           role-to-assume: ${{ secrets.AWS_ROLE_BUILD }}
