@@ -162,14 +162,38 @@ jobs:
           pip -v install -e .
           pip install twine
 
-      - uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-region: eu-west-2
-          role-to-assume: ${{ secrets.AWS_ROLE_BUILD }}
-          role-session-name: build_versioned_collection
+#      - uses: aws-actions/configure-aws-credentials@v2
+#        with:
+#          aws-region: eu-west-2
+#          role-to-assume: ${{ secrets.AWS_ROLE_BUILD }}
+#          role-session-name: build_versioned_collection
+#
+#      - name: Build and publish
+#        run: |
+#          aws codeartifact login --tool twine --domain humanising --repository research
+#          python -m build --wheel
+#          twine upload -r codeartifact dist/*
 
-      - name: Build and publish
-        run: |
-          aws codeartifact login --tool twine --domain humanising --repository research
-          python -m build --wheel
-          twine upload -r codeartifact dist/*
+      - name: Authenticate with Cloudsmith
+        uses: HumanisingAutonomy/ha-foundation-python/github_actions/configure_python_download_cloudsmith_credentials@v0.4.2
+        with:
+          username: sandbox-bot
+          password: ${{secrets.CLOUDSMITH_SANDBOX_BOT_API_KEY}}
+          organisation: humanising-autonomy
+          repository_name: ha-sandbox
+
+      - name: Configure python publish credentials
+        uses: HumanisingAutonomy/ha-foundation-python/github_actions/configure_python_publish_cloudsmith_credentials@v0.2.2
+        with:
+          organisation: humanising-autonomy
+          repository_name: ha-sandbox
+          username: sandbox-bot
+          password: ${{secrets.CLOUDSMITH_SANDBOX_BOT_API_KEY}}
+
+      - name: Build (Twine)
+        run: python -m build --wheel
+
+      - name: Publish (Twine)
+        env:
+          TWINE_PASSWORD: ${{secrets.CLOUDSMITH_SANDBOX_BOT_API_KEY}}
+        run: twine upload -r ha-sandbox dist/*
