@@ -18,7 +18,7 @@ pushing data between them.
 
 <details>
   <summary>MongoDB</summary>
-  
+
 
 Firstly, make sure you install
 [MongoDB>=5.0](https://docs.mongodb.com/manual/installation/), and enable 
