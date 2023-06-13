@@ -9,7 +9,9 @@ from copy import deepcopy
 from functools import partial, wraps
 from multiprocessing import cpu_count, Pool
 from shutil import rmtree
-from typing import Optional, List, Any, Dict, Tuple, Union, Set
+from typing import (
+    Optional, List, Any, Dict, Tuple, Union, Set, overload, Literal
+)
 
 import pymongo
 from bson import ObjectId
@@ -24,7 +26,10 @@ from versioned_collection.collection.tracking_collections import (
     LogsCollection,
     DeltasCollection,
     BranchesCollection,
-    ReplicaCollection, ConflictsCollection, StashContainer, LockCollection
+    ReplicaCollection,
+    ConflictsCollection,
+    StashContainer,
+    LockCollection
 )
 from versioned_collection.errors import (
     CollectionAlreadyInitialised, InvalidOperation,
@@ -38,7 +43,7 @@ from versioned_collection.utils.mongo_query import (
 )
 from versioned_collection.utils.multi_processing import chunk_list
 from versioned_collection.utils.serialization import (
-    stringify_object_id, stringify_document, parse_json_document, colour_diff
+    stringify_object_id, stringify_document, parse_json_document
 )
 
 
@@ -1317,10 +1322,27 @@ class VersionedCollection(Collection):
         self._listener.start()
         return True
 
+    @overload
     def diff(self,
              version: Optional[int] = None,
-             branch: Optional[str] = None
+             branch: Optional[str] = None,
+             deep: Literal[False] = False,
              ) -> Optional[Dict[Any, str]]:
+        ...
+
+    @overload
+    def diff(self,
+             version: Optional[int] = None,
+             branch: Optional[str] = None,
+             deep: Literal[True] = True,
+             ) -> Optional[Dict[Any, DeepDiff]]:
+        ...
+
+    def diff(self,
+             version: Optional[int] = None,
+             branch: Optional[str] = None,
+             deep: Literal[True, False] = True
+             ) -> Optional[Union[Dict[Any, str], Dict[Any, DeepDiff]]]:
         """ Returns the diffs between the current and the given version.
 
         If no version id or branch are given, this method computes the diffs
@@ -1353,6 +1375,8 @@ class VersionedCollection(Collection):
             <diffs between current state and version 0 on the current branch>
             >>> collection.diff(branch='branch')
             <diffs between current state and the latest version from 'branch'>
+            >>> print(collection.diff(structural=True))
+            <pretty structural diff>
 
 
         :raises `~versioned_collection.errors.InvalidCollectionVersion`: If
@@ -1361,8 +1385,13 @@ class VersionedCollection(Collection):
         :param version: The version to compare the current version with.
         :param branch: The branch on which the version to compare the current
             version with is registered on.
-        :return: The structural diffs of the modified documents, grouped by
-            their ids. If the collection is not tracked, returns ``None``.
+        :param deep: Whether to compute the class:`DeepDiff` object containing
+            the deep differences between the objects or a structural diff (
+            printable, similar to git diffs). Defaults to ``True``.
+            the deep differences between the objects.
+        :return: The structural or deep diffs of the modified documents,
+            grouped by their ids. If the collection is not tracked, returns
+            ``None``.
         """
         if not self._tracked:
             return None
@@ -1404,23 +1433,32 @@ class VersionedCollection(Collection):
             current_modified = group_documents_by_id(current_modified)
             current.update(current_modified)
 
-        diffs = dict()
         doc_ids = set(old.keys()).union(set(current.keys()))
 
+        def compute_deep_diff(doc1, doc2, doc_id):
+            return doc_id, DeepDiff(doc1, doc2)
+
+        def compute_structural_diff(doc1, doc2, doc_id):
+            doc1 = stringify_document(doc1)
+            doc2 = stringify_document(doc2)
+            doc_id = stringify_object_id(doc_id)
+
+            _diff = DeepDiff(doc1, doc2)['values_changed']['root']['diff']
+            return doc_id, _diff
+
+        diff_fn = compute_deep_diff if deep else compute_structural_diff
+
+        diffs = dict()
         for _id in doc_ids:
             if _id not in old and _id not in current:
                 # These are documents inserted and deleted between the two
                 # versions, so we don't care about them
                 continue
-            old_doc = stringify_document(old.get(_id, {}))
-            current_doc = stringify_document(current.get(_id, {}))
+            old_doc = old.get(_id, {})
+            current_doc = current.get(_id, {})
 
-            if isinstance(_id, ObjectId):
-                _id = stringify_object_id(_id)
-
-            diffs[_id] = colour_diff(DeepDiff(
-                old_doc, current_doc,
-            )['values_changed']['root']['diff'])
+            _id, diff = diff_fn(old_doc, current_doc, _id)
+            diffs[_id] = diff
 
         return diffs
 
