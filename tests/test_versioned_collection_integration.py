@@ -652,6 +652,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init()
         self.assertEqual({}, self.user_collection.diff())
+        self.assertEqual({}, self.user_collection.diff(deep=False))
 
     def test_invalid_versions_throw_error(self):
         self.user_collection.init()
@@ -670,12 +671,28 @@ class TestVersionedCollectionDiff(_BaseTest):
         sleep(SLEEP_TIME)
         diffs = self.user_collection.diff()
         self.assertEqual(2, len(diffs))
+        diffs = self.user_collection.diff(deep=False)
+        self.assertEqual(2, len(diffs))
         ids = set(diffs.keys())
         doc_ids = {
             stringify_object_id(self.DOCUMENT['_id']),
             stringify_object_id(self.DOCUMENT2['_id'])
         }
         self.assertEqual(ids, doc_ids)
+
+    def test_deep_diff(self):
+        self.user_collection.insert_one(self.DOCUMENT)
+        self.user_collection.init()
+        self.user_collection.update_one(
+            {'name': 'Goethe'},
+            {"$set": {'name': 'GOETHE'}}
+        )
+        sleep(SLEEP_TIME)
+        diff = self.user_collection.diff(deep=True)[self.DOCUMENT['_id']]
+        print(diff)
+        self.assertEqual(
+            diff['values_changed']["root['name']"]['new_value'], "GOETHE"
+        )
 
     def test_diffs_between_two_registered_versions(self):
         self.user_collection.init()
@@ -684,16 +701,22 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.register('v1')
         diffs = self.user_collection.diff(0)
         self.assertEqual(2, len(diffs))
+        diffs = self.user_collection.diff(0, deep=False)
+        self.assertEqual(2, len(diffs))
 
     def test_diffs_with_unregister_changes2(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
         diffs = self.user_collection.diff(branch='main')
         self.assertEqual(1, len(diffs))
+        diffs = self.user_collection.diff(branch='main', deep=False)
+        self.assertEqual(1, len(diffs))
 
     def test_diffs_with_no_changes(self):
         self.user_collection.init()
         diff = self.user_collection.diff(branch='main')
+        self.assertEqual(0, len(diff))
+        diff = self.user_collection.diff(branch='main', deep=False)
         self.assertEqual(0, len(diff))
 
     def test_diffs_between_versions_with_untracked_changes(self):
@@ -703,12 +726,16 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT2)
         diffs = self.user_collection.diff(0, 'main')
         self.assertEqual(2, len(diffs))
+        diffs = self.user_collection.diff(0, 'main', deep=False)
+        self.assertEqual(2, len(diffs))
 
     def test_diff_ignores_no_ops(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.delete_one({'_id': self.DOCUMENT['_id']})
         diff = self.user_collection.diff(0, 'main')
+        self.assertEqual(0, len(diff))
+        diff = self.user_collection.diff(0, 'main', deep=False)
         self.assertEqual(0, len(diff))
 
 

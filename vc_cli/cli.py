@@ -20,6 +20,7 @@ from pymongo import MongoClient
 import versioned_collection
 from versioned_collection import VersionedCollection
 from versioned_collection.errors import BranchNotFound
+from versioned_collection.utils.serialization import colour_diff
 
 _CONFIG_DIR = f"{expanduser('~')}/.config/versioned_collection"
 _CONFIG_FILE_PTH = os.path.join(_CONFIG_DIR, 'CONFIG')
@@ -305,7 +306,9 @@ def log(args):
 def diff(args):
     diffs = None
     try:
-        diffs = _load_versioned_collection().diff(args.version, args.branch)
+        diffs = _load_versioned_collection().diff(
+            args.version, args.branch, deep=False
+        )
     except Exception as e:
         _error(str(e))
         exit(-1)
@@ -319,6 +322,7 @@ def diff(args):
         pager = subprocess.Popen(['less', '-F', '-R', '-X', '-K'],
                                  stdin=subprocess.PIPE, stdout=sys.stdout)
         for doc_id, diff_str in diffs.items():
+            diff_str = colour_diff(diff_str)
             pager.stdin.write(('\n' + Fore.YELLOW + f"Document {doc_id}\n"
                                + diff_str + '\n').encode())
         pager.stdin.close()
