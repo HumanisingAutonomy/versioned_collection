@@ -738,6 +738,41 @@ class TestVersionedCollectionDiff(_BaseTest):
         diff = self.user_collection.diff(0, 'main', deep=False)
         self.assertEqual(0, len(diff))
 
+    def tests_diffs_forward_and_backward(self):
+        self.user_collection.init()
+        self.user_collection.insert_one(self.DOCUMENT)
+        self.user_collection.register('v1')
+        self.user_collection.insert_one(self.DOCUMENT2)
+        self.user_collection.register('v2')
+
+        diff_backward_2 = self.user_collection.diff(0)
+        self.assertEqual(2, len(diff_backward_2))
+
+        self.user_collection.checkout(1)
+        diff_backward_1 = self.user_collection.diff(0)
+        self.assertEqual(1, len(diff_backward_1))
+
+        self.user_collection.checkout(0)
+        diff_forward_1 = self.user_collection.diff(1)
+        self.assertEqual(1, len(diff_forward_1))
+        diff_forward_2 = self.user_collection.diff(2)
+        self.assertEqual(2, len(diff_forward_2))
+
+        pairs = [
+            (diff_forward_1, diff_backward_1), (diff_forward_2, diff_backward_2)
+        ]
+        for diff_forward, diff_backward in pairs:
+            for obj_id in diff_forward.keys():
+                diff_f = diff_forward[obj_id]
+                diff_b = diff_backward[obj_id]
+
+                self.assertIn('dictionary_item_removed', diff_f)
+                self.assertIn('dictionary_item_added', diff_b)
+                self.assertEqual(
+                    diff_f['dictionary_item_removed'],  # noqa
+                    diff_b['dictionary_item_added']  # noqa
+                )
+
 
 class TestVersionedCollectionLog(_BaseTest):
 
