@@ -1061,11 +1061,14 @@ class VersionedCollection(Collection):
             self,
             current_version: Tuple[int, str],
             target_version: Tuple[int, str],
+            current_source: Optional[Collection] = None,
     ) -> Tuple[Dict[Any, Dict[str, Any]], Dict[Any, Dict[str, Any]]]:
         """ Gets the modified documents since the target version was registered.
 
         :param current_version: The current version.
         :param target_version: The target version.
+        :param current_source: The collection from which to pull the current
+            documents. The sensible options are ``self`` or `replica`.
         :return: The documents of the target version and the documents of the
             current version that were modified between the two versions.
         """
@@ -1091,8 +1094,11 @@ class VersionedCollection(Collection):
             )
 
         # Get the documents that have to be updated
+        if current_source is None:
+            current_source = self
+
         doc_ids = list(per_document_deltas.keys())
-        current_documents = list(self.find({'_id': {'$in': doc_ids}}))
+        current_documents = list(current_source.find({'_id': {'$in': doc_ids}}))
 
         # Get the updated documents
         documents, current_documents = self._deltas_collection.apply_deltas(
@@ -1327,6 +1333,7 @@ class VersionedCollection(Collection):
              version: Optional[int] = None,
              branch: Optional[str] = None,
              deep: Literal[False] = False,
+             direction: Literal['to', 'from'] = 'from',
              ) -> Optional[Dict[Any, str]]:
         ...
 
@@ -1335,13 +1342,15 @@ class VersionedCollection(Collection):
              version: Optional[int] = None,
              branch: Optional[str] = None,
              deep: Literal[True] = True,
+             direction: Literal['to', 'from'] = 'from',
              ) -> Optional[Dict[Any, DeepDiff]]:
         ...
 
     def diff(self,
              version: Optional[int] = None,
              branch: Optional[str] = None,
-             deep: Literal[True, False] = True
+             deep: Literal[True, False] = True,
+             direction: Literal['to', 'from'] = 'from',
              ) -> Optional[Union[Dict[Any, str], Dict[Any, DeepDiff]]]:
         """ Returns the diffs between the current and the given version.
 
@@ -1355,12 +1364,6 @@ class VersionedCollection(Collection):
         If the `branch` parameter is omitted and the `version` parameter is
         given, then the target version is considered to be version with id
         `version` from the current branch.
-
-        .. note::
-            The direction of the diffs is always from the given version to
-            the current version, i.e., they show the changes made to a
-            document to move from the old version, identified by the
-            `version` and  `branch` parameters, to the current version.
 
         Examples:
 
@@ -1377,6 +1380,8 @@ class VersionedCollection(Collection):
             <diffs between current state and the latest version from 'branch'>
             >>> print(collection.diff(structural=True))
             <pretty structural diff>
+            >>> collection.diff(0, 'main', direction='to')
+            <diff from the current version to version 0 on branch main>
 
 
         :raises `~versioned_collection.errors.InvalidCollectionVersion`: If
@@ -1389,6 +1394,12 @@ class VersionedCollection(Collection):
             the deep differences between the objects or a structural diff (
             printable, similar to git diffs). Defaults to ``True``.
             the deep differences between the objects.
+        :param direction: The direction in which to compute the diff. When
+            equal to ``'to'``, the current version is considered the reference
+            version and the diffs represent the changes made to current
+            collection state to reach the target collection state. When equal to
+            ``'from'``, the given version is considered the reference version.
+            Defaults to ``'from'``.
         :return: The structural or deep diffs of the modified documents,
             grouped by their ids. If the collection is not tracked, returns
             ``None``.
@@ -1403,13 +1414,15 @@ class VersionedCollection(Collection):
         mod_ids = self._modified_collection.find_modified_documents_ids()
         mod_ids = [doc['_id'] for doc in mod_ids]
         if version is None and branch is None:
-            # The old documents are in the replica collection
-            old = self._replica_collection.find({'_id': {"$in": mod_ids}})
-            old = group_documents_by_id(old)
-            current = self.find({'_id': {"$in": mod_ids}})
-            current = group_documents_by_id(current)
+            # The other documents are in the replica collection
+            current = group_documents_by_id(
+                self.find({'_id': {"$in": mod_ids}})
+            )
+            other = group_documents_by_id(
+                self._replica_collection.find({'_id': {"$in": mod_ids}})
+            )
         else:
-            # Get the old documents from the target version
+            # Get the other documents from the target version
             if version is None:
                 br_data = self._branches_collection.get_branch(branch)
                 version = br_data.points_to_collection_version
@@ -1420,20 +1433,27 @@ class VersionedCollection(Collection):
                     not self.has_changes():
                 return dict()
 
-            old, current = self._get_documents_modified_between_versions(
+            other, current = self._get_documents_modified_between_versions(
                 current_version=(self._current_version, self._current_branch),
-                target_version=(version, branch)
+                target_version=(version, branch),
+                current_source=self._replica_collection,
             )
 
-        if self.has_changes() and not (version is None and branch is None):
-            # If there are changes and the target version is not necessarily
-            # the latest version registered, then also grab the unregistered
-            # changes and update the current documents.
-            current_modified = self.find({'_id': {"$in": mod_ids}})
-            current_modified = group_documents_by_id(current_modified)
-            current.update(current_modified)
+            if self.has_changes():
+                # If there are changes and the target version is not necessarily
+                # the latest version registered, then also grab the unregistered
+                # changes and update the current documents.
+                current_modified = group_documents_by_id(
+                    self.find({'_id': {"$in": mod_ids}})
+                )
+                current.update(current_modified)
+                if version == self.version and branch == self.branch:
+                    other_modified = group_documents_by_id(
+                        self._replica_collection.find({'_id': {"$in": mod_ids}})
+                    )
+                    other.update(other_modified)
 
-        doc_ids = set(old.keys()).union(set(current.keys()))
+        doc_ids = set(other.keys()).union(set(current.keys()))
 
         def compute_deep_diff(doc1, doc2, doc_id):
             return doc_id, DeepDiff(doc1, doc2)
@@ -1450,14 +1470,17 @@ class VersionedCollection(Collection):
 
         diffs = dict()
         for _id in doc_ids:
-            if _id not in old and _id not in current:
+            if _id not in other and _id not in current:
                 # These are documents inserted and deleted between the two
                 # versions, so we don't care about them
                 continue
-            old_doc = old.get(_id, {})
+            other_doc = other.get(_id, {})
             current_doc = current.get(_id, {})
 
-            _id, diff = diff_fn(old_doc, current_doc, _id)
+            if direction == 'to':
+                other_doc, current_doc = current_doc, other_doc
+
+            _id, diff = diff_fn(other_doc, current_doc, _id)
             diffs[_id] = diff
 
         return diffs
