@@ -10,7 +10,7 @@ from functools import partial, wraps
 from multiprocessing import cpu_count, Pool
 from shutil import rmtree
 from typing import (
-    Optional, List, Any, Dict, Tuple, Union, Set, overload, Literal
+    Optional, List, Any, Dict, Tuple, Union, Set, overload, Literal,
 )
 
 import pymongo
@@ -29,7 +29,7 @@ from versioned_collection.collection.tracking_collections import (
     ReplicaCollection,
     ConflictsCollection,
     StashContainer,
-    LockCollection
+    LockCollection,
 )
 from versioned_collection.errors import (
     CollectionAlreadyInitialised, InvalidOperation,
@@ -48,9 +48,9 @@ from versioned_collection.utils.serialization import (
 
 
 def _collection_modified_by_pipeline(
-        pipeline: List[Dict[str, Any]],
-        collection_name: str,
-        database_name: str
+    pipeline: List[Dict[str, Any]],
+    collection_name: str,
+    database_name: str
 ) -> bool:
     """ Checks an aggregation pipeline for collection changes.
 
@@ -64,8 +64,10 @@ def _collection_modified_by_pipeline(
         that modify the collection with `collection_name`, located on
         database with name `database_name`, ``False`` otherwise.
     """
-    if not len(pipeline) or \
-            not ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
+    if (
+        not len(pipeline)
+        or not ("$out" in pipeline[-1] or "$merge" in pipeline[-1])
+    ):
         return False
 
     for operator, argument in pipeline[-1].items():
@@ -74,8 +76,10 @@ def _collection_modified_by_pipeline(
         elif isinstance(argument, dict):
             # then the argument is a dictionary of shape
             # {"db": <database name>, "coll": <collection name>}
-            if argument['db'] == database_name and \
-                    argument['coll'] == collection_name:
+            if (
+                argument['db'] == database_name
+                and argument['coll'] == collection_name
+            ):
                 return True
     return False
 
@@ -186,8 +190,7 @@ class VersionedCollection(Collection):
             b.name for b in self._branches_collection.get_empty_branches()
         ])
         branches_hash = hash('__'.join(branches))
-        return 97 * hash(self.name) + 43 * branches_hash + \
-            281 * hash(self.version_tree)
+        return hash((self.name, branches_hash, self.versiontree))
 
     def __eq__(self, other: object) -> bool:
         """
@@ -281,14 +284,18 @@ class VersionedCollection(Collection):
                 return False
 
         if strict:
-            ret = self.version_tree < other.version_tree and \
-                  len(these_empty_branches) <= len(those_empty_branches) \
-                  or \
-                  self.version_tree == other.version_tree and \
-                  len(these_empty_branches) < len(those_empty_branches)
+            ret = (
+                self.version_tree < other.version_tree
+                and len(these_empty_branches) <= len(those_empty_branches)
+                or
+                self.version_tree == other.version_tree
+                and len(these_empty_branches) < len(those_empty_branches)
+            )
         else:
-            ret = self.version_tree <= other.version_tree and \
-                  len(these_empty_branches) <= len(those_empty_branches)
+            ret = (
+                self.version_tree <= other.version_tree
+                and len(these_empty_branches) <= len(those_empty_branches)
+            )
         return ret
 
     def __lt__(self, other: object) -> bool:
@@ -367,8 +374,10 @@ class VersionedCollection(Collection):
                     if function.__name__ in {
                         'find_one_and_replace', 'find_one_and_update'
                     }:
-                        if kwargs.get('upsert', False) or \
-                                len(args) >= 5 and args[4]:
+                        if (
+                            kwargs.get('upsert', False)
+                            or len(args) >= 5 and args[4]
+                        ):
                             # `upsert` is the 5th argument
                             self._has_changed()
                     if ret is not None:
@@ -380,15 +389,17 @@ class VersionedCollection(Collection):
 
                 elif op == 'aggregate':
                     if _collection_modified_by_pipeline(
-                            pipeline=args[0],
-                            collection_name=self.name,
-                            database_name=self.database.name
+                        pipeline=args[0],
+                        collection_name=self.name,
+                        database_name=self.database.name
                     ):
                         self._has_changed()
 
                 elif op == 'bulk':
-                    any_count = ret.modified_count + ret.deleted_count + \
-                                ret.inserted_count + ret.upserted_count
+                    any_count = (
+                        ret.modified_count + ret.deleted_count
+                        + ret.inserted_count + ret.upserted_count
+                    )
                     if any_count > 0:
                         self._has_changed()
                 return ret
@@ -546,8 +557,10 @@ class VersionedCollection(Collection):
         """
         if self._tracked:
             self._listener.stop()
-            for col in self._tracking_collections + \
-                       self._temporary_tracking_collections:
+            for col in (
+                self._tracking_collections
+                + self._temporary_tracking_collections
+            ):
                 col.drop()
             self._tracked = False
             self._lock_collection.remove_collection(self.name)
@@ -576,8 +589,10 @@ class VersionedCollection(Collection):
         """
         super().rename(new_name, *args, **kwargs)
         if self._tracked:
-            for coll in self._tracking_collections + \
-                        self._temporary_tracking_collections:
+            for coll in (
+                self._tracking_collections
+                + self._temporary_tracking_collections
+            ):
                 coll.rename(new_name, *args, **kwargs)
         return VersionedCollection(
             self.database, new_name, *self.__credentials, **self.__kwargs
@@ -805,15 +820,15 @@ class VersionedCollection(Collection):
 
     @staticmethod
     def _register_chunk(
-            modified_tracker_docs: List[Dict[str, ObjectId | List[ObjectId]]],
-            logs: List[Tuple[int, str]],
-            coll_name: str,
-            branch: str,
-            version: int,
-            timestamp: datetime.datetime,
-            database_name: str,
-            credentials: Tuple[Optional[str], Optional[str]],
-            address: Tuple[str, str]
+        modified_tracker_docs: List[Dict[str, ObjectId | List[ObjectId]]],
+        logs: List[Tuple[int, str]],
+        coll_name: str,
+        branch: str,
+        version: int,
+        timestamp: datetime.datetime,
+        database_name: str,
+        credentials: Tuple[Optional[str], Optional[str]],
+        address: Tuple[str, str]
     ) -> bool:
         """ Helper used to register new changes.
 
@@ -1058,10 +1073,10 @@ class VersionedCollection(Collection):
         return True
 
     def _get_documents_modified_between_versions(
-            self,
-            current_version: Tuple[int, str],
-            target_version: Tuple[int, str],
-            current_source: Optional[Collection] = None,
+        self,
+        current_version: Tuple[int, str],
+        target_version: Tuple[int, str],
+        current_source: Optional[Collection] = None,
     ) -> Tuple[Dict[Any, Dict[str, Any]], Dict[Any, Dict[str, Any]]]:
         """ Gets the modified documents since the target version was registered.
 
@@ -1329,29 +1344,57 @@ class VersionedCollection(Collection):
         return True
 
     @overload
-    def diff(self,
-             version: Optional[int] = None,
-             branch: Optional[str] = None,
-             deep: Literal[False] = False,
-             direction: Literal['to', 'from'] = 'from',
-             ) -> Optional[Dict[Any, str]]:
+    def diff(
+        self,
+        version: Optional[int] = None,
+        branch: Optional[str] = None,
+        deep: Literal[False] = False,
+        direction: Literal['to', 'from', 'bidirectional'] = 'from',
+    ) -> Optional[Dict[Any, str]]:
         ...
 
     @overload
-    def diff(self,
-             version: Optional[int] = None,
-             branch: Optional[str] = None,
-             deep: Literal[True] = True,
-             direction: Literal['to', 'from'] = 'from',
-             ) -> Optional[Dict[Any, DeepDiff]]:
+    def diff(
+        self,
+        version: Optional[int] = None,
+        branch: Optional[str] = None,
+        deep: Literal[True] = True,
+        direction: Literal['to', 'from', 'bidirectional'] = 'from',
+    ) -> Optional[Dict[Any, DeepDiff]]:
         ...
 
-    def diff(self,
-             version: Optional[int] = None,
-             branch: Optional[str] = None,
-             deep: Literal[True, False] = True,
-             direction: Literal['to', 'from'] = 'from',
-             ) -> Optional[Union[Dict[Any, str], Dict[Any, DeepDiff]]]:
+    @overload
+    def diff(
+        self,
+        version: Optional[int] = None,
+        branch: Optional[str] = None,
+        deep: Literal[False] = False,
+        direction: Literal['to', 'from', 'bidirectional'] = 'bidirectional',
+    ) -> Optional[Dict[Literal['to', 'from'], Dict[Any, str]]]:
+        ...
+
+    @overload
+    def diff(
+        self,
+        version: Optional[int] = None,
+        branch: Optional[str] = None,
+        deep: Literal[True] = True,
+        direction: Literal['to', 'from', 'bidirectional'] = 'bidirectional',
+    ) -> Optional[Dict[Literal['to', 'from'], Dict[Any, DeepDiff]]]:
+        ...
+
+    def diff(
+        self,
+        version: Optional[int] = None,
+        branch: Optional[str] = None,
+        deep: Literal[True, False] = True,
+        direction: Literal['to', 'from', 'bidirectional'] = 'from',
+    ) -> Union[
+            Optional[Dict[Any, str]],
+            Optional[Dict[Any, DeepDiff]],
+            Optional[Dict[Literal['to', 'from'], Dict[Any, str]]],
+            Optional[Dict[Literal['to', 'from'], Dict[Any, DeepDiff]]],
+    ]:
         """ Returns the diffs between the current and the given version.
 
         If no version id or branch are given, this method computes the diffs
@@ -1399,9 +1442,13 @@ class VersionedCollection(Collection):
             version and the diffs represent the changes made to current
             collection state to reach the target collection state. When equal to
             ``'from'``, the given version is considered the reference version.
-            Defaults to ``'from'``.
+            When equal to ``'bidirectional'``, both forward and backward
+            diffs are computed and returned. Defaults to ``'from'``.
         :return: The structural or deep diffs of the modified documents,
-            grouped by their ids. If the collection is not tracked, returns
+            grouped by their ids, in case of unidirectional diffs. In the
+            case of bidirectional diffs, it returns the diffs grouped by the
+            modified document id and grouped by the direction. If the
+            collection is not tracked, returns
             ``None``.
         """
         if not self._tracked:
@@ -1429,8 +1476,11 @@ class VersionedCollection(Collection):
                 branch = br_data.points_to_branch
             branch = self._current_branch if branch is None else branch
 
-            if version == self.version and branch == self.branch and \
-                    not self.has_changes():
+            if (
+                version == self.version
+                and branch == self.branch
+                and not self.has_changes()
+            ):
                 return dict()
 
             other, current = self._get_documents_modified_between_versions(
@@ -1468,7 +1518,8 @@ class VersionedCollection(Collection):
 
         diff_fn = compute_deep_diff if deep else compute_structural_diff
 
-        diffs = dict()
+        diffs_to = dict()
+        diffs_from = dict()
         for _id in doc_ids:
             if _id not in other and _id not in current:
                 # These are documents inserted and deleted between the two
@@ -1477,16 +1528,26 @@ class VersionedCollection(Collection):
             other_doc = other.get(_id, {})
             current_doc = current.get(_id, {})
 
-            if direction == 'to':
-                other_doc, current_doc = current_doc, other_doc
+            if direction == 'from' or direction == 'bidirectional':
+                __id, diff = diff_fn(other_doc, current_doc, _id)
+                diffs_from[__id] = diff
 
-            _id, diff = diff_fn(other_doc, current_doc, _id)
-            diffs[_id] = diff
+            if direction == 'to' or direction == 'bidirectional':
+                __id, diff = diff_fn(current_doc, other_doc, _id)
+                diffs_to[__id] = diff
+
+        if direction == 'bidirectional':
+            diffs = {'from': diffs_from, 'to': diffs_to}
+        elif direction == 'to':
+            diffs = diffs_to
+        else:
+            diffs = diffs_from
 
         return diffs
 
-    def get_log(self, branch: Optional[str] = None) \
-            -> List[LogsCollection.SCHEMA]:
+    def get_log(
+        self, branch: Optional[str] = None
+    ) -> List[LogsCollection.SCHEMA]:
         """ Returns the log of this collection for the given branch.
 
         The returned history is in descending order (the latest entry first).
@@ -1742,8 +1803,10 @@ class VersionedCollection(Collection):
             remote_log = remote_collection.get_log(branch)
             local_log = src.get_log(branch)
 
-            if len(remote_log) == len(local_log) and \
-                    remote_log[0] == local_log[0]:
+            if (
+                len(remote_log) == len(local_log)
+                and remote_log[0] == local_log[0]
+            ):
                 # Everything is up-to-date
                 return True
 
@@ -1771,8 +1834,11 @@ class VersionedCollection(Collection):
                 parent_branch = local_branch_data.points_to_branch
 
             # Check if the branching point exists on the remote collection
-            if not remote_collection._log_collection.contains_version(
-                    parent_version, parent_branch):
+            if (
+                not remote_collection._log_collection.contains_version(
+                    parent_version, parent_branch
+                )
+            ):
                 raise InvalidOperation(
                     f"Cannot push branch {branch} while its parent branch "
                     f"{parent_branch} is not pushed up to the branching "
@@ -1983,9 +2049,11 @@ class VersionedCollection(Collection):
 
         branch = branch if branch is not None else self.branch
 
-        if self.has_changes() \
-                and branch == self.branch \
-                and not self.is_detached():
+        if (
+            self.has_changes()
+            and branch == self.branch
+            and not self.is_detached()
+        ):
             # Raise error here since automatic stashing could result in data
             # loss since stashing overwrites the documents and does not merge
             # them.
@@ -2057,9 +2125,14 @@ class VersionedCollection(Collection):
 
         # Pull from remote
         do_checkout = False
-        if diverging_version is None and \
-                (branch == self.branch and not self.is_detached()
-                 or not self._tracked):
+        if (
+            diverging_version is None
+            and
+            (
+                branch == self.branch and not self.is_detached()
+                or not self._tracked
+            )
+        ):
             do_checkout = True
 
         self._push(remote_collection, self, branch, do_checkout=do_checkout)
@@ -2135,9 +2208,11 @@ class VersionedCollection(Collection):
         merged, updated, conflicting = [], [], []
 
         for _id in all_ids:
-            if _id not in original and \
-                    _id not in dest_docs and \
-                    _id not in source_docs:
+            if (
+                _id not in original
+                and _id not in dest_docs
+                and _id not in source_docs
+            ):
                 # Added and deleted in both
                 continue
             if _id not in original and _id not in source_docs:
@@ -2201,10 +2276,10 @@ class VersionedCollection(Collection):
 
     @staticmethod
     def _auto_merge(
-            destination: Dict[str, Any],
-            source: Dict[str, Any],
-            diff_destination: DeepDiff,
-            diff_source: DeepDiff
+        destination: Dict[str, Any],
+        source: Dict[str, Any],
+        diff_destination: DeepDiff,
+        diff_source: DeepDiff
     ) -> Tuple[Dict[str, Any], List[str]]:
         """ Merges the `source` and `destination` dictionaries.
 
@@ -2293,7 +2368,7 @@ class VersionedCollection(Collection):
             self._branches_collection.update_branch(
                 branch=br.name,
                 pointing_to_collection_version=(
-                        br.points_to_collection_version - version
+                    br.points_to_collection_version - version
                 ),
                 pointing_to_branch=new_name
             )
@@ -2393,9 +2468,9 @@ class VersionedCollection(Collection):
 
     @_synchronize
     def delete_version_subtree(
-            self,
-            version: int,
-            branch: Optional[str] = None
+        self,
+        version: int,
+        branch: Optional[str] = None
     ) -> bool:
         """ Deletes a version and all versions registered after it.
 
@@ -2491,8 +2566,10 @@ class VersionedCollection(Collection):
             branch_data = self._branches_collection.get_branch(
                 self._current_branch
             )
-            if self.version == branch_data.points_to_collection_version and \
-                    self.branch == branch_data.points_to_branch:
+            if (
+                self.version == branch_data.points_to_collection_version
+                and self.branch == branch_data.points_to_branch
+            ):
                 # The subtree bellow the current version has been deletes so
                 # the head is now attached to the new tip of the branch
                 self._meta_collection.set_metadata(detached=False)

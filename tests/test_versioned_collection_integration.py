@@ -832,6 +832,22 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.assertIn('dictionary_item_added', diff_0_1)
         self.assertIn('dictionary_item_removed', diff_1_0)
 
+    def test_bidirectional_diff(self):
+        self.user_collection.init()
+        self.user_collection.insert_one(self.DOCUMENT)
+        self.user_collection.register('v1')
+
+        diff = self.user_collection.diff(0, direction='bidirectional')
+
+        self.assertEqual(2, len(diff))
+        self.assertIn('to', diff)
+        self.assertIn('from', diff)
+
+        diff_to = self.user_collection.diff(0, direction='to')
+        diff_from = self.user_collection.diff(0, direction='from')
+        self.assertEqual(diff_to, diff['to'])
+        self.assertEqual(diff_from, diff['from'])
+
 
 class TestVersionedCollectionLog(_BaseTest):
 
