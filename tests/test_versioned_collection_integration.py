@@ -63,8 +63,10 @@ class TestVersionedCollectionBasics(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init()
         self.assertFalse(self.user_collection.has_changes())
-        self.user_collection.find_one_and_replace({'name': 'Goethe'},
-                                                  self.DOCUMENT2)
+        self.user_collection.find_one_and_replace(
+            {'name': 'Goethe'},
+            self.DOCUMENT2
+        )
         self.assertTrue(self.user_collection.has_changes())
 
     def test_find_one_and_update(self):
@@ -689,7 +691,6 @@ class TestVersionedCollectionDiff(_BaseTest):
         )
         sleep(SLEEP_TIME)
         diff = self.user_collection.diff(deep=True)[self.DOCUMENT['_id']]
-        print(diff)
         self.assertEqual(
             diff['values_changed']["root['name']"]['new_value'], "GOETHE"
         )
@@ -728,6 +729,48 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.assertEqual(2, len(diffs))
         diffs = self.user_collection.diff(0, 'main', deep=False)
         self.assertEqual(2, len(diffs))
+
+    def test_diffs_with_untracked_changes(self):
+        self.user_collection.insert_one(self.DOCUMENT2)
+        self.user_collection.init()
+        self.user_collection.update_one(
+            {'_id': self.DOCUMENT2['_id']},
+            {"$set": {'new_field': 'new_value'}}
+        )
+        diffs = self.user_collection.diff(0, direction='to')
+        self.assertEqual(1, len(diffs))
+        diff = diffs[self.DOCUMENT2['_id']]
+        self.assertIn('dictionary_item_removed', diff)
+        self.assertEqual(1, len(diff['dictionary_item_removed']))  # noqa
+
+    def test_diff_with_both_registered_and_untracked_changes(self):
+        self.user_collection.insert_one(self.DOCUMENT)
+        self.user_collection.init()
+        self.user_collection.update_one(
+            {'_id': self.DOCUMENT['_id']},
+            {"$set": {'field_1': 'value_1'}}
+        )
+        self.user_collection.insert_one(self.DOCUMENT2)
+        sleep(SLEEP_TIME)
+        self.user_collection.register('v1')
+        self.user_collection.update_one(
+            {'_id': self.DOCUMENT['_id']},
+            {"$set": {'field_2': 'value_2'}}
+        )
+        self.user_collection.update_one(
+            {'_id': self.DOCUMENT2['_id']},
+            {"$set": {'field_1': 'value_1'}}
+        )
+        sleep(SLEEP_TIME)
+
+        diffs = self.user_collection.diff(0, direction='to')
+        self.assertEqual(2, len(diffs))
+        diff1 = diffs[self.DOCUMENT['_id']]
+        diff2 = diffs[self.DOCUMENT2['_id']]
+        self.assertIn('dictionary_item_removed', diff1)
+        self.assertEqual(2, len(diff1['dictionary_item_removed']))  # noqa
+        self.assertIn('dictionary_item_removed', diff2)
+        self.assertEqual(4, len(diff2['dictionary_item_removed']))  # noqa
 
     def test_diff_ignores_no_ops(self):
         self.user_collection.init()
@@ -772,6 +815,22 @@ class TestVersionedCollectionDiff(_BaseTest):
                     diff_f['dictionary_item_removed'],  # noqa
                     diff_b['dictionary_item_added']  # noqa
                 )
+
+    def test_diff_direction(self):
+        self.user_collection.init()
+        self.user_collection.insert_one(self.DOCUMENT)
+        self.user_collection.register('v1')
+
+        diff_0_1 = self.user_collection.diff(0)
+        diff_1_0 = self.user_collection.diff(0, direction='to')
+
+        self.assertEqual(1, len(diff_1_0))
+        self.assertEqual(1, len(diff_0_1))
+
+        diff_0_1 = diff_0_1[self.DOCUMENT['_id']]
+        diff_1_0 = diff_1_0[self.DOCUMENT['_id']]
+        self.assertIn('dictionary_item_added', diff_0_1)
+        self.assertIn('dictionary_item_removed', diff_1_0)
 
 
 class TestVersionedCollectionLog(_BaseTest):
