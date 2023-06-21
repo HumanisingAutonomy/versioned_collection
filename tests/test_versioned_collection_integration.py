@@ -654,7 +654,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init()
         self.assertEqual({}, self.user_collection.diff())
-        self.assertEqual({}, self.user_collection.diff(deep=False))
+        self.assertEqual({}, self.user_collection.diff())
 
     def test_invalid_versions_throw_error(self):
         self.user_collection.init()
@@ -671,7 +671,7 @@ class TestVersionedCollectionDiff(_BaseTest):
                                         {"$set": {'name': 'GOETHE'}})
         self.user_collection.delete_one({'name': 'Euler'})
         sleep(SLEEP_TIME)
-        diffs = self.user_collection.diff()
+        diffs = self.user_collection.diff(deep=True)
         self.assertEqual(2, len(diffs))
         diffs = self.user_collection.diff(deep=False)
         self.assertEqual(2, len(diffs))
@@ -702,7 +702,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.register('v1')
         diffs = self.user_collection.diff(0)
         self.assertEqual(2, len(diffs))
-        diffs = self.user_collection.diff(0, deep=False)
+        diffs = self.user_collection.diff(0, deep=True)
         self.assertEqual(2, len(diffs))
 
     def test_diffs_with_unregister_changes2(self):
@@ -710,14 +710,14 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         diffs = self.user_collection.diff(branch='main')
         self.assertEqual(1, len(diffs))
-        diffs = self.user_collection.diff(branch='main', deep=False)
+        diffs = self.user_collection.diff(branch='main', deep=True)
         self.assertEqual(1, len(diffs))
 
     def test_diffs_with_no_changes(self):
         self.user_collection.init()
         diff = self.user_collection.diff(branch='main')
         self.assertEqual(0, len(diff))
-        diff = self.user_collection.diff(branch='main', deep=False)
+        diff = self.user_collection.diff(branch='main', deep=True)
         self.assertEqual(0, len(diff))
 
     def test_diffs_between_versions_with_untracked_changes(self):
@@ -727,7 +727,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT2)
         diffs = self.user_collection.diff(0, 'main')
         self.assertEqual(2, len(diffs))
-        diffs = self.user_collection.diff(0, 'main', deep=False)
+        diffs = self.user_collection.diff(0, 'main', deep=True)
         self.assertEqual(2, len(diffs))
 
     def test_diffs_with_untracked_changes(self):
@@ -737,7 +737,7 @@ class TestVersionedCollectionDiff(_BaseTest):
             {'_id': self.DOCUMENT2['_id']},
             {"$set": {'new_field': 'new_value'}}
         )
-        diffs = self.user_collection.diff(0, direction='to')
+        diffs = self.user_collection.diff(0, direction='to', deep=True)
         self.assertEqual(1, len(diffs))
         diff = diffs[self.DOCUMENT2['_id']]
         self.assertIn('dictionary_item_removed', diff)
@@ -763,7 +763,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         )
         sleep(SLEEP_TIME)
 
-        diffs = self.user_collection.diff(0, direction='to')
+        diffs = self.user_collection.diff(0, direction='to', deep=True)
         self.assertEqual(2, len(diffs))
         diff1 = diffs[self.DOCUMENT['_id']]
         diff2 = diffs[self.DOCUMENT2['_id']]
@@ -778,7 +778,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.delete_one({'_id': self.DOCUMENT['_id']})
         diff = self.user_collection.diff(0, 'main')
         self.assertEqual(0, len(diff))
-        diff = self.user_collection.diff(0, 'main', deep=False)
+        diff = self.user_collection.diff(0, 'main', deep=True)
         self.assertEqual(0, len(diff))
 
     def tests_diffs_forward_and_backward(self):
@@ -788,17 +788,17 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT2)
         self.user_collection.register('v2')
 
-        diff_backward_2 = self.user_collection.diff(0)
+        diff_backward_2 = self.user_collection.diff(0, deep=True)
         self.assertEqual(2, len(diff_backward_2))
 
         self.user_collection.checkout(1)
-        diff_backward_1 = self.user_collection.diff(0)
+        diff_backward_1 = self.user_collection.diff(0, deep=True)
         self.assertEqual(1, len(diff_backward_1))
 
         self.user_collection.checkout(0)
-        diff_forward_1 = self.user_collection.diff(1)
+        diff_forward_1 = self.user_collection.diff(1, deep=True)
         self.assertEqual(1, len(diff_forward_1))
-        diff_forward_2 = self.user_collection.diff(2)
+        diff_forward_2 = self.user_collection.diff(2, deep=True)
         self.assertEqual(2, len(diff_forward_2))
 
         pairs = [
@@ -821,8 +821,8 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.register('v1')
 
-        diff_0_1 = self.user_collection.diff(0)
-        diff_1_0 = self.user_collection.diff(0, direction='to')
+        diff_0_1 = self.user_collection.diff(0, deep=True)
+        diff_1_0 = self.user_collection.diff(0, direction='to', deep=True)
 
         self.assertEqual(1, len(diff_1_0))
         self.assertEqual(1, len(diff_0_1))
@@ -837,14 +837,16 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.register('v1')
 
-        diff = self.user_collection.diff(0, direction='bidirectional')
+        diff = self.user_collection.diff(
+            0, direction='bidirectional', deep=True
+        )
 
         self.assertEqual(2, len(diff))
         self.assertIn('to', diff)
         self.assertIn('from', diff)
 
-        diff_to = self.user_collection.diff(0, direction='to')
-        diff_from = self.user_collection.diff(0, direction='from')
+        diff_to = self.user_collection.diff(0, direction='to', deep=True)
+        diff_from = self.user_collection.diff(0, direction='from', deep=True)
         self.assertEqual(diff_to, diff['to'])
         self.assertEqual(diff_from, diff['from'])
 

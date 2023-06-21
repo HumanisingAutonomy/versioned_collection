@@ -1387,7 +1387,7 @@ class VersionedCollection(Collection):
         self,
         version: Optional[int] = None,
         branch: Optional[str] = None,
-        deep: Literal[True, False] = True,
+        deep: Literal[True, False] = False,
         direction: Literal['to', 'from', 'bidirectional'] = 'from',
     ) -> Union[
             Optional[Dict[Any, str]],
@@ -1407,6 +1407,11 @@ class VersionedCollection(Collection):
         If the `branch` parameter is omitted and the `version` parameter is
         given, then the target version is considered to be version with id
         `version` from the current branch.
+
+        .. note::
+            Passing ``deep=True`` can consume a large volume of memory for
+            large collection diffs since each diff stores both versions of
+            a document.
 
         Examples:
 
@@ -1435,7 +1440,7 @@ class VersionedCollection(Collection):
             version with is registered on.
         :param deep: Whether to compute the class:`DeepDiff` object containing
             the deep differences between the objects or a structural diff (
-            printable, similar to git diffs). Defaults to ``True``.
+            printable, similar to git diffs). Defaults to ``False``.
             the deep differences between the objects.
         :param direction: The direction in which to compute the diff. When
             equal to ``'to'``, the current version is considered the reference
