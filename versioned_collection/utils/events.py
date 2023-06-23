@@ -64,6 +64,8 @@ def reduce_event_sequence(events: List[str]) -> Optional[str]:
 
     where 'any' can be either of insert, update, delete or no-op.
 
+    :raises ValueError: If `events` is an invalid sequence of events.
+
     :param events: The list of events to be reduced. This sequence
         should consist of pure events. The permitted events and their
         representation are inserts ('i'), (pure) updates ('u') and

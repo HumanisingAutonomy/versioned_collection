@@ -89,6 +89,8 @@ class BranchesCollection(_BaseTrackerCollection):
     ) -> None:
         """Create a new branch pointing to the specified location.
 
+        :raises ValueError: If a branch with name ``branch`` already exists.
+
         :param branch: The name of the new branch.
         :param pointing_to_collection_version: The collection version to
             which this branch should point to.
@@ -113,6 +115,8 @@ class BranchesCollection(_BaseTrackerCollection):
         new_name: Optional[str] = None,
     ) -> None:
         """Update the information about a branch pointer.
+
+        :raises ValueError: If no branch with name ``branch`` exists.
 
         :param branch: The name of the branch to be updated.
         :param pointing_to_collection_version:  The new collection version to

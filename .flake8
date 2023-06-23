@@ -15,6 +15,7 @@ exclude =
     version.py,
     docs/,
     .ci/,
+    vc_cli/
 
 max-line-length = 80
 select = A,ANN,B,B9,B950,C,D,DAR,E,F,N,PT,S,T4,W
@@ -23,6 +24,7 @@ ignore =
     D100, B907, B028, D104, DAR101, DAR402, DAR003, S101, B905, N806,
     B904,
     D101,
+    S404,
 application-import-names = versioned_collection,tests
 import-order-style = google
 per-file-ignores =
@@ -31,4 +33,5 @@ per-file-ignores =
     conftest.py:D100,D101,D102,D103
     noxfile.py:D100,D101,D102,D103,DAR101
     versioned_collection/utils/*: D100, D103
+    versioned_collection/collection/tracking_collections/*: D106
 docstring_style = sphinx

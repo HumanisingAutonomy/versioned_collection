@@ -10,7 +10,7 @@ from versioned_collection.collection.tracking_collections import (
 
 
 class StashCollection(_BaseTrackerCollection):
-    """Stores the stash data of a collection"""
+    """Stores the stash data of a collection."""
 
     _NAME_TEMPLATE = '__stash_{}'
 

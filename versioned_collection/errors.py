@@ -41,7 +41,7 @@ class InvalidCollectionState(Exception):
 
 
 class BranchNotFound(Exception):
-    """Raised when a branch could not be found"""
+    """Raised when a branch could not be found."""
 
     def __init__(self, branch_name: str) -> None:
         super().__init__(f"Branch '{branch_name}' does not exists!")

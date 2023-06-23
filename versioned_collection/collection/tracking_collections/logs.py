@@ -130,7 +130,7 @@ class LogsCollection(_BaseTrackerCollection):
         log_entries = {e['_id']: e for e in self.find({})}
         # find the root
         root = None
-        for entry_id, entry in log_entries.items():
+        for entry in log_entries.values():
             if entry['prev'] is None:
                 root = entry
                 break
@@ -287,12 +287,11 @@ class LogsCollection(_BaseTrackerCollection):
     ) -> Dict[Tuple[int, str], int]:
         """Find the path between the given points in the log tree.
 
-        The current and the target versions should exist in the log tree,
-        otherwise a :class:`ValueError` error is raised.
-
         .. note::
             The returned path includes the both ends.
 
+        :raises ValueError: If the current or target versions do not exist
+            in the log tree.
         :param current: The start point version.
         :param target: The end point version.
         :return: An ordered dictionary representing the path that has to be
@@ -304,7 +303,6 @@ class LogsCollection(_BaseTrackerCollection):
             the backward direction as ``-1``. The last entry, representing the
             target version, has the direction of the previous step as direction.
         """
-
         _ERROR_MSG = "Version {} does not exist in the log tree!"
 
         if current == target:
@@ -408,7 +406,6 @@ class LogsCollection(_BaseTrackerCollection):
             to a remote collection.
         :return: The version id and the branch name of the new entry.
         """
-
         if previous_version == -1 and previous_branch is None:
             # This adds the root of the log tree
             version = 0
@@ -599,7 +596,7 @@ class LogsCollection(_BaseTrackerCollection):
     ) -> Optional[Tuple[int, str]]:
         """Return the version and branch of the previous version.
 
-        :raises NodeIDAbsentError: If the version identified by `version`
+        :raises InvalidCollectionVersion: If the version identified by `version`
             does not exist.
         :param version: The version whose parent should be retrieved.
         :return: The parent of the given version.
@@ -609,10 +606,10 @@ class LogsCollection(_BaseTrackerCollection):
         version = self._get_log_tree_identifier(*version)
         try:
             node = self._log_tree.parent(version)
-        except NodeIDAbsentError:
+        except NodeIDAbsentError as e:
             raise InvalidCollectionVersion(
                 *version, message='Invalid collection version ({}, {})'
-            )
+            ) from e
         return node.data.version, node.data.branch
 
     def rebranch(self, version: Tuple[int, str], new_branch: str) -> None:
@@ -624,7 +621,6 @@ class LogsCollection(_BaseTrackerCollection):
         :param version: The versions at which the enw branch should start.
         :param new_branch: The name of the new branch.
         """
-
         node: Node = self._log_tree.parent(
             self._get_log_tree_identifier(*version)
         )

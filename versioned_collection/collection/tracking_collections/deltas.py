@@ -165,7 +165,10 @@ class DeltasCollection(_BaseTrackerCollection):
         branch_history: List[Tuple[int, str]],
         with_id: Optional[ObjectId] = None,
     ) -> Optional[ObjectId]:
-        """Compute and records the deltas between the given document versions
+        """Compute and records the deltas between the given document versions.
+
+        :raises InvalidCollectionState: If some deltas for the current
+            collection version cannot be identified.
 
         :param document_old: The old version of the document.
         :param document_new: The new version of the document, that contains
@@ -184,7 +187,6 @@ class DeltasCollection(_BaseTrackerCollection):
         :return: The id of the delta document, or ``None`` if the two versions
             of the document are unchanged.
         """
-
         forward_diff = DeepDiff(
             document_old,
             document_new,
@@ -577,7 +579,6 @@ class DeltasCollection(_BaseTrackerCollection):
         :param num_versions: The number of versions to move, i.e., the length
             of the branch starting at `start_version`.
         """
-
         cond = {
             "$or": [
                 {'collection_version_id': v, 'branch': start_version[1]}
