@@ -7,7 +7,7 @@ from pymongo.database import Database
 
 
 class LockCollection(Collection):
-    """ Collection holding the locking information.
+    """Collection holding the locking information.
 
     This collection is necessary when multiple users are concurrently
     interacting with a `VersionedCollection`.
@@ -41,11 +41,9 @@ class LockCollection(Collection):
         super().__init__(database, '__vc_lock', **kwargs)
 
     def init_lock(self, collection: str):
-        """ Initialises the lock """
+        """Initialise the lock."""
         doc = {'collection_name': collection, 'locked': False}
-        self.find_one_and_replace(
-            filter=doc, replacement=doc, upsert=True
-        )
+        self.find_one_and_replace(filter=doc, replacement=doc, upsert=True)
 
     def is_locked(self, collection: str) -> Optional[bool]:
         return self.find_one(
@@ -53,7 +51,7 @@ class LockCollection(Collection):
         )
 
     def try_lock_acquire(self, collection: str) -> bool:
-        """ Tries to acquire the lock for the given collection.
+        """Try to acquire the lock for the given collection.
 
         :return: ``True`` if the lock is successfully acquired, ``False`` if
             the lock is held by other process.
@@ -65,7 +63,7 @@ class LockCollection(Collection):
         return ret is not None
 
     def lock_acquire(self, collection: str) -> bool:
-        """ Acquires the lock for the given collection.
+        """Acquire the lock for the given collection.
 
         :param collection: The name of the collection to lock.
         :return: Whether the process waited for the lock.
@@ -77,19 +75,19 @@ class LockCollection(Collection):
         return has_waited_for_lock
 
     def lock_release(self, collection: str) -> bool:
-        """ Releases the lock for the given collection.
+        """Release the lock for the given collection.
 
         :param collection: The name of the collection to unlock.
         :return: Whether the collection was locked.
         """
         ret = self.find_one_and_update(
             filter={'collection_name': collection, 'locked': True},
-            update={"$set": {'locked': False}}
+            update={"$set": {'locked': False}},
         )
         return ret is not None
 
     def remove_collection(self, collection: str) -> None:
-        """ Removes the locking information for the given collection.
+        """Remove the locking information for the given collection.
 
         :param collection: The name of the collection for which to remove the
             lock.

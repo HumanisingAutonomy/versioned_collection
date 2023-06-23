@@ -8,6 +8,7 @@ from unittest import TestCase
 
 
 class _Data(dict):
+
     def __init__(self, seq=None, **kwargs):
         if seq is not None:
             super().__init__(seq, **kwargs)

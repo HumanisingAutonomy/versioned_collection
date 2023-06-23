@@ -8,26 +8,27 @@ from bson import ObjectId
 from pymongo import MongoClient
 
 from versioned_collection.collection.tracking_collections import (
-    ModifiedCollection
+    ModifiedCollection,
 )
 
 
 class CollectionListener:
-    """ Listens to changes to a specific collection.
+    """Listens to changes to a specific collection.
 
     Starts a background process that monitors the target collection for any
     changes and stores the ids of the updated documents in the
     `ModifiedCollection` linked to the target collection.
     """
 
-    def __init__(self,
-                 database_name: str,
-                 collection_name: str,
-                 host: str = 'localhost',
-                 port: str = '27017',
-                 credentials: Tuple[Optional[str], Optional[str]] = None
-                 ) -> None:
-        """ Creates a new `CollectionListener`.
+    def __init__(
+        self,
+        database_name: str,
+        collection_name: str,
+        host: str = 'localhost',
+        port: int = 27017,
+        credentials: Tuple[Optional[str], Optional[str]] = None,
+    ) -> None:
+        """Initialise a  :class:`CollectionListener`.
 
         :param database_name: The name of the database on which the target
             collection is located.
@@ -39,8 +40,9 @@ class CollectionListener:
         """
         self._database_name = database_name
         self._collection_name = collection_name
-        self.__credentials = (None, None) if credentials is None \
-            else credentials
+        self.__credentials = (
+            (None, None) if credentials is None else credentials
+        )
         self._address = host, port
         self._p: Optional[Process] = None
         self._HEARTBEAT_TIMEOUT = 0.05
@@ -58,7 +60,7 @@ class CollectionListener:
         self.stop()
 
     def is_listening(self) -> bool:
-        """ Checks if this listener has started listening to changes.
+        """Check if this listener has started listening to changes.
 
         :return: Whether the listener is listening or not.
         """
@@ -67,7 +69,7 @@ class CollectionListener:
         return bool(self._listening.value)
 
     def stop(self) -> None:
-        """ Stops this listener from monitoring the target collection.
+        """Stop this listener from monitoring the target collection.
 
         The listener is safely stopped to allow the changes (that were produced
         before signaling the listener to stop) to be processed. This is
@@ -90,7 +92,7 @@ class CollectionListener:
             try:
                 self._heartbeat_q.get(
                     block=True,
-                    timeout=self._HEARTBEAT_TIMEOUT
+                    timeout=self._HEARTBEAT_TIMEOUT,
                 )
             except queue.Empty:
                 # The heartbeat timeout expired, so the listener is
@@ -101,7 +103,7 @@ class CollectionListener:
         self._p.join()
 
     def start(self) -> None:
-        """Starts the listener to monitor the target collection.
+        """Start the listener to monitor the target collection.
 
         Lunches a monitoring daemon that uses `changeStreams` to watch the
         target collection for all types of updates.
@@ -118,14 +120,16 @@ class CollectionListener:
         self._heartbeat_q = Queue()
         self._p = Process(
             target=self._listen,
-            args=(self._database_name,
-                  self._collection_name,
-                  *self._address,
-                  *self.__credentials,
-                  self._listening,
-                  self._timestamp_q,
-                  self._heartbeat_q,
-                  self._lock)
+            args=(
+                self._database_name,
+                self._collection_name,
+                *self._address,
+                *self.__credentials,
+                self._listening,
+                self._timestamp_q,
+                self._heartbeat_q,
+                self._lock,
+            ),
         )
         self._p.daemon = True
         self._p.start()
@@ -138,18 +142,18 @@ class CollectionListener:
 
     @staticmethod
     def _listen(
-            database_name: str,
-            collection_name: str,
-            host: str,
-            port: str,
-            username: Optional[str],
-            password: Optional[str],
-            listening: Value,
-            last_timestamp: Queue,
-            heartbeat_q: Queue,
-            lock: Lock
+        database_name: str,
+        collection_name: str,
+        host: str,
+        port: int,
+        username: Optional[str],
+        password: Optional[str],
+        listening: Value,
+        last_timestamp: Queue,
+        heartbeat_q: Queue,
+        lock: Lock,
     ) -> None:
-        """ The listening background task.
+        """Listen in a background task.
 
         Opens a client connection to the given database and starts watching
         the collection identified by `collection_name`. The ids of the
@@ -177,7 +181,7 @@ class CollectionListener:
 
         _output_collection = ModifiedCollection(
             database=client[database_name],
-            parent_collection_name=collection_name
+            parent_collection_name=collection_name,
         )
 
         timestamp = None
@@ -220,11 +224,15 @@ class CollectionListener:
                             op_type = 'u'
                         # Manually generate ids to keep the order of the events
                         # and allow parallel insertion in database
-                        docs.append({'_id': ObjectId(),
-                                     'id': document_id,
-                                     'op': op_type})
-                        if (not change_stream._cursor._has_next() or  # noqa
-                                len(docs) > batch_size):
+                        docs.append({
+                            '_id': ObjectId(),
+                            'id': document_id,
+                            'op': op_type,
+                        })
+                        if (
+                            not change_stream._cursor._has_next()  # noqa
+                            or len(docs) > batch_size  # noqa
+                        ):
                             _output_collection.insert_many(docs)
                             docs = []
                     except KeyError:

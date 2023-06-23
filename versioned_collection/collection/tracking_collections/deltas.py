@@ -12,8 +12,9 @@ from pymongo.command_cursor import CommandCursor
 from pymongo.database import Database
 from treelib import Node
 
-from versioned_collection.collection.tracking_collections import \
-    _BaseTrackerCollection
+from versioned_collection.collection.tracking_collections import (
+    _BaseTrackerCollection,
+)
 from versioned_collection.errors import InvalidCollectionState
 from versioned_collection.tree import Tree
 from versioned_collection.utils.data_structures import hashabledict
@@ -21,7 +22,7 @@ from versioned_collection.utils.mongo_query import group_documents_by_id
 
 
 class DeltasCollection(_BaseTrackerCollection):
-    """ Stores the deltas between different versions of the target collection.
+    """Stores the deltas between different versions of the target collection.
 
     Each `delta` document in this collection reflects the changes and
     therefore, the actions needed to be performed to move between different
@@ -50,6 +51,7 @@ class DeltasCollection(_BaseTrackerCollection):
     to be applied to a document to move across versions.
 
     """
+
     _NAME_TEMPLATE = '__deltas_{}'
     _DOCUMENT_TYPE = Dict[str, Any]
 
@@ -72,15 +74,13 @@ class DeltasCollection(_BaseTrackerCollection):
                 return None
             return self.__dict__[attr]
 
-    def __init__(self,
-                 database: Database,
-                 parent_collection_name: str,
-                 **kwargs
-                 ) -> None:
+    def __init__(
+        self, database: Database, parent_collection_name: str, **kwargs
+    ) -> None:
         super().__init__(database, parent_collection_name, **kwargs)
 
     def build(self) -> bool:
-        """ Creates the collection on the database.
+        """Create the collection on the database.
 
         :return: ``False`` if the collection already exists, ``True`` otherwise.
         """
@@ -88,13 +88,16 @@ class DeltasCollection(_BaseTrackerCollection):
             return False
 
         self.create_index('document_id')
-        self.create_index([('collection_version_id', pymongo.DESCENDING),
-                           ('branch', pymongo.ASCENDING)])
+        self.create_index([
+            ('collection_version_id', pymongo.DESCENDING),
+            ('branch', pymongo.ASCENDING),
+        ])
         return True
 
-    def _build_delta_tree_set(self, deltas: List[_DOCUMENT_TYPE]) \
-            -> Optional[List[Tree]]:
-        """ Builds the per-document delta tree set.
+    def _build_delta_tree_set(
+        self, deltas: List[_DOCUMENT_TYPE]
+    ) -> Optional[List[Tree]]:
+        """Build the per-document delta tree set.
 
         .. note::
             The given list of documents should be deltas related to a single
@@ -134,8 +137,7 @@ class DeltasCollection(_BaseTrackerCollection):
 
     @staticmethod
     def _build_delta_tree(
-            root: ObjectId,
-            deltas: Dict[ObjectId, SCHEMA]
+        root: ObjectId, deltas: Dict[ObjectId, SCHEMA]
     ) -> Tree:
         # Build the per-document partial delta tree.
         tree = Tree()
@@ -147,27 +149,23 @@ class DeltasCollection(_BaseTrackerCollection):
             _delta = deltas[_id]
             # This allows to build partial trees
             parent = _delta.prev if _delta.prev in deltas else None
-            tree.create_node(
-                identifier=_id,
-                parent=parent,
-                data=_delta
-            )
+            tree.create_node(identifier=_id, parent=parent, data=_delta)
             to_visit.extend(_delta.next)
 
         return tree
 
     def add_delta(
-            self,
-            document_old: _DOCUMENT_TYPE,
-            document_new: _DOCUMENT_TYPE,
-            document_id: ObjectId,
-            collection_version: int,
-            branch: str,
-            timestamp: datetime.datetime,
-            branch_history: List[Tuple[int, str]],
-            with_id: Optional[ObjectId] = None
+        self,
+        document_old: _DOCUMENT_TYPE,
+        document_new: _DOCUMENT_TYPE,
+        document_id: ObjectId,
+        collection_version: int,
+        branch: str,
+        timestamp: datetime.datetime,
+        branch_history: List[Tuple[int, str]],
+        with_id: Optional[ObjectId] = None,
     ) -> Optional[ObjectId]:
-        """ Computes and records the deltas between the given document versions
+        """Compute and records the deltas between the given document versions
 
         :param document_old: The old version of the document.
         :param document_new: The new version of the document, that contains
@@ -188,9 +186,10 @@ class DeltasCollection(_BaseTrackerCollection):
         """
 
         forward_diff = DeepDiff(
-            document_old, document_new,
+            document_old,
+            document_new,
             ignore_order=False,
-            report_repetition=False
+            report_repetition=False,
         )
 
         # No changes actually made since the previous registered version.
@@ -210,7 +209,8 @@ class DeltasCollection(_BaseTrackerCollection):
         # of multiple document updates
         _hist_set.add((collection_version, branch))
         deltas = [
-            d for d in deltas
+            d
+            for d in deltas
             if (d['collection_version_id'], d['branch']) in _hist_set
         ]
 
@@ -242,13 +242,17 @@ class DeltasCollection(_BaseTrackerCollection):
 
             # Trim the path to match the root of the delta tree
             next_node: Node = tree.get_node(tree.root)
-            while len(branch_history) > 0 and \
-                    self._version_of(next_node) != branch_history[-1]:
+            while (
+                len(branch_history) > 0
+                and self._version_of(next_node) != branch_history[-1]
+            ):
                 branch_history.pop(-1)
 
             if len(branch_history) == 0:
-                if self._version_of(next_node) == (collection_version, branch) \
-                        and len(deltas) == 1:
+                if (
+                    self._version_of(next_node) == (collection_version, branch)
+                    and len(deltas) == 1
+                ):
                     # This document has already been registered by the
                     # current `register` operation and the document was
                     # modified for the first time during this register
@@ -257,7 +261,7 @@ class DeltasCollection(_BaseTrackerCollection):
                     # forward diffs.
                     old_forward_diff = Delta(
                         next_node.data['forward'],
-                        safe_to_import=self._SAFE_TO_IMPORT
+                        safe_to_import=self._SAFE_TO_IMPORT,
                     ).diff
                     if forward_diff == old_forward_diff:
                         # The document has not changed, but it was simply
@@ -268,8 +272,9 @@ class DeltasCollection(_BaseTrackerCollection):
                         update_forward_and_backward_deltas = True
                         delta_doc_id = next_node.identifier
                 else:
-                    curr_collection_version = 0 if collection_version < 0 else \
-                        collection_version - 1
+                    curr_collection_version = (
+                        0 if collection_version < 0 else collection_version - 1
+                    )
                     raise InvalidCollectionState(
                         f"\nCould not identify the previous delta for the "
                         f"current collection state and the given list "
@@ -285,8 +290,10 @@ class DeltasCollection(_BaseTrackerCollection):
                 # Use the reversed history to descend from root to the latest
                 # delta that modified the document
                 branch_history.insert(0, (collection_version, branch))
-                while len(branch_history) > 1 and \
-                        self._version_of(next_node) == branch_history[-1]:
+                while (
+                    len(branch_history) > 1
+                    and self._version_of(next_node) == branch_history[-1]
+                ):
                     branch_history.pop(-1)
                     for child in tree.children(next_node.identifier):
                         if self._version_of(child) == branch_history[-1]:
@@ -295,7 +302,7 @@ class DeltasCollection(_BaseTrackerCollection):
                 if self._version_of(next_node) == (collection_version, branch):
                     old_forward_diff = Delta(
                         next_node.data['forward'],
-                        safe_to_import=self._SAFE_TO_IMPORT
+                        safe_to_import=self._SAFE_TO_IMPORT,
                     ).diff
                     if forward_diff == old_forward_diff:
                         # The document has not changed, but it was simply
@@ -311,11 +318,14 @@ class DeltasCollection(_BaseTrackerCollection):
                     prev_delta_doc['_id'] = next_node.identifier
 
         forward = Delta(forward_diff)
-        backward = Delta(DeepDiff(
-            document_new, document_old,
-            ignore_order=False,
-            report_repetition=False
-        ))
+        backward = Delta(
+            DeepDiff(
+                document_new,
+                document_old,
+                ignore_order=False,
+                report_repetition=False,
+            )
+        )
 
         delta_doc = self.SCHEMA(
             document_id=document_id,
@@ -325,16 +335,18 @@ class DeltasCollection(_BaseTrackerCollection):
             forward=forward.dumps(),
             backward=backward.dumps(),
             prev=None if prev_delta_doc is None else prev_delta_doc['_id'],
-            next=[]
+            next=[],
         ).__dict__
 
         if update_forward_and_backward_deltas:
             self.update_one(
                 {'_id': delta_doc_id},
-                update={"$set": {
-                    'forward': delta_doc['forward'],
-                    'backward': delta_doc['backward']
-                }}
+                update={
+                    "$set": {
+                        'forward': delta_doc['forward'],
+                        'backward': delta_doc['backward'],
+                    }
+                },
             )
             delta_doc['_id'] = delta_doc_id
         else:
@@ -348,13 +360,13 @@ class DeltasCollection(_BaseTrackerCollection):
             next_list.append(delta_doc['_id'])
             self.find_one_and_update(
                 filter={'_id': delta_doc['prev']},
-                update={"$set": {"next": next_list}}
+                update={"$set": {"next": next_list}},
             )
 
         return delta_doc['_id']
 
     def insert_delta_docs(self, delta_docs: List[_DOCUMENT_TYPE]) -> None:
-        """ Inserts a list of delta documents into this collection.
+        """Insert a list of delta documents into this collection.
 
         .. warning::
             This method modified the delta documents and removes the ids of
@@ -384,19 +396,20 @@ class DeltasCollection(_BaseTrackerCollection):
                 # The following delta docs are inserted directly
                 self.find_one_and_update(
                     filter={'_id': delta_doc['prev']},
-                    update={"$push": {"next": delta_doc['_id']}}
+                    update={"$push": {"next": delta_doc['_id']}},
                 )
         # Add the delta documents
         self.insert_many(delta_docs)
 
     def _delta_doc_to_schema(self, delta: Dict[str, Any]) -> SCHEMA:
-        """ Converts a delta document to a schema object. """
+        """Convert a delta document to a schema object."""
         delta.pop('_id')
         return self.SCHEMA(**delta)
 
-    def get_deltas(self, path: Dict[Tuple[int, str], int]) \
-            -> Dict[Any, List[Delta]]:
-        """ Retrieves the deltas across the given path of versions.
+    def get_deltas(
+        self, path: Dict[Tuple[int, str], int]
+    ) -> Dict[Any, List[Delta]]:
+        """Retrieve the deltas across the given path of versions.
 
         :param path: The path between two versions. The keys identify the
             version (i.e., (version, branch) tuples) and the values the
@@ -418,8 +431,7 @@ class DeltasCollection(_BaseTrackerCollection):
             # since _get_deltas overlaps a partial with the path anyway. We
             # still do the same amount of work, so it's fine for now.
             _deltas = self._get_deltas(
-                self._build_partial_delta_tree(trees, path),
-                path
+                self._build_partial_delta_tree(trees, path), path
             )
             doc_id = doc['_id']
             if isinstance(doc_id, dict):
@@ -429,11 +441,11 @@ class DeltasCollection(_BaseTrackerCollection):
         return deltas
 
     def _build_partial_delta_tree(
-            self,
-            trees: List[Tree],
-            path: Dict[Tuple[int, str], int]
+        self,
+        trees: List[Tree],
+        path: Dict[Tuple[int, str], int],
     ) -> Tree:
-        """ Builds a partial per-document delta tree out of unconnected trees.
+        """Build a partial per-document delta tree out of unconnected trees.
 
         :param trees: The trees to merge.
         :param path: The path to follow across the merged tree.
@@ -471,7 +483,7 @@ class DeltasCollection(_BaseTrackerCollection):
         assert len(trees) == 2
 
         direction = None
-        version = None
+        version: Optional[int, str] = None
         for i, (_version, _direction) in enumerate(path.items()):
             _version: Tuple[int, str]
             if i == 0:
@@ -480,11 +492,14 @@ class DeltasCollection(_BaseTrackerCollection):
                 version = _version
                 break
 
-        empty_delta_binary = Delta(DeepDiff(
-            dict(), dict(),
-            ignore_order=False,
-            report_repetition=False
-        )).dumps()
+        empty_delta_binary = Delta(
+            DeepDiff(
+                dict(),
+                dict(),
+                ignore_order=False,
+                report_repetition=False,
+            )
+        ).dumps()
 
         tree = Tree()
         tree.create_node(
@@ -494,23 +509,23 @@ class DeltasCollection(_BaseTrackerCollection):
                 document_id=None,
                 collection_version_id=version[0],
                 branch=version[1],
-                timestamp=None, # noqa
+                timestamp=None,  # noqa
                 forward=empty_delta_binary,
                 backward=empty_delta_binary,
                 prev=None,  # noqa
-                next=[t.get_node(t.root).identifier for t in trees]
-            )
+                next=[t.get_node(t.root).identifier for t in trees],
+            ),
         )
         tree.paste(tree.root, trees[0])
         tree.paste(tree.root, trees[1])
         return tree
 
     def get_delta_documents_in_path(
-            self,
-            path: Dict[Tuple[int, str], int],
-            sorting_order: Optional[int] = None
+        self,
+        path: Dict[Tuple[int, str], int],
+        sorting_order: Optional[int] = None,
     ) -> CommandCursor:
-        """ Gets the delta documents grouped by tracked document's id in `path`.
+        """Get the delta documents grouped by tracked document's id in `path`.
 
         :param path: The path in the version tree from which to pull the
             delta documents.
@@ -527,15 +542,19 @@ class DeltasCollection(_BaseTrackerCollection):
                 elif path[versions[0]] in [0, 1]:
                     versions.pop(0)
 
+        # fmt: off
         cond = {"$or": [
             {'collection_version_id': v, 'branch': b}
             for (v, b) in versions
         ]}
 
-        sort_stage = [{
-            "$sort": {'timestamp': sorting_order}
-        }] if sorting_order is not None else []
+        sort_stage = (
+            [{"$sort": {'timestamp': sorting_order}}]
+            if sorting_order is not None
+            else []
+        )
 
+        # fmt: off
         documents = self.aggregate([
             {"$match": cond},
             *sort_stage,
@@ -546,13 +565,12 @@ class DeltasCollection(_BaseTrackerCollection):
         return documents
 
     def rebranch(
-            self,
-            start_version: Tuple[int, str],
-            new_branch: str,
-            num_versions: int
+        self,
+        start_version: Tuple[int, str],
+        new_branch: str,
+        num_versions: int,
     ) -> None:
-        """ Moves the deltas on the branch starting at `start_version` to
-        another branch.
+        """Move the deltas after `start_version` to another branch.
 
         :param start_version: The version which should be moved to a new branch.
         :param new_branch: The name of the new branch.
@@ -560,28 +578,32 @@ class DeltasCollection(_BaseTrackerCollection):
             of the branch starting at `start_version`.
         """
 
-        cond = {"$or": [
-            {'collection_version_id': v, 'branch': start_version[1]}
-            for v in range(start_version[0], start_version[0] + num_versions)]}
+        cond = {
+            "$or": [
+                {'collection_version_id': v, 'branch': start_version[1]}
+                for v in range(
+                    start_version[0], start_version[0] + num_versions
+                )
+            ]
+        }
 
         self.update_many(
             cond,
-            {"$set": {'branch': new_branch},
-             "$inc": {'collection_version_id': -start_version[0]}
-             }
+            {
+                "$set": {'branch': new_branch},
+                "$inc": {'collection_version_id': -start_version[0]},
+            },
         )
 
     @staticmethod
     def _version_of(n: Node) -> Tuple[int, str]:
-        """ Gets the version identifier of a node in the delta tree."""
+        """Get the version identifier of a node in the delta tree."""
         return n.data.collection_version_id, n.data.branch
 
     def _get_deltas(
-            self,
-            tree: Tree,
-            path: Dict[Tuple[int, str], int]
+        self, tree: Tree, path: Dict[Tuple[int, str], int]
     ) -> List[Delta]:
-        """ Gets the list of deltas for the given path.
+        """Get the list of deltas for the given path.
 
         Given a delta tree and a sequence of versions and the direction to be
         taken into the version tree to navigate between them, it computes the
@@ -600,15 +622,20 @@ class DeltasCollection(_BaseTrackerCollection):
         """
 
         def _extract_and_decode_deltas(
-                nodes: List[Node], _direction: str
+            nodes: List[Node], _direction: str
         ) -> List[Delta]:
-            assert _direction in ['forward', 'backward'], \
-                "Invalid delta direction!"
+            assert _direction in [
+                'forward',
+                'backward',
+            ], "Invalid delta direction!"
 
-            return [Delta(
-                n.data[_direction],
-                safe_to_import=DeltasCollection._SAFE_TO_IMPORT
-            ) for n in nodes]
+            return [
+                Delta(
+                    n.data[_direction],
+                    safe_to_import=DeltasCollection._SAFE_TO_IMPORT,
+                )
+                for n in nodes
+            ]
 
         # Find the first node in the delta tree that is in :param:`path`. The
         # subtree rooted in that node contains the required deltas.
@@ -685,15 +712,15 @@ class DeltasCollection(_BaseTrackerCollection):
         return _deltas
 
     def apply_deltas(
-            self,
-            per_document_deltas: Dict[Any, List[Delta]],
-            documents: List[_DOCUMENT_TYPE],
-            return_current_documents: bool = False,
+        self,
+        per_document_deltas: Dict[Any, List[Delta]],
+        documents: List[_DOCUMENT_TYPE],
+        return_current_documents: bool = False,
     ) -> Union[
         Dict[Any, _DOCUMENT_TYPE],
-        Tuple[Dict[Any, _DOCUMENT_TYPE], Dict[Any, _DOCUMENT_TYPE]]
+        Tuple[Dict[Any, _DOCUMENT_TYPE], Dict[Any, _DOCUMENT_TYPE]],
     ]:
-        """ Updates the given documents and returns them.
+        """Update the given documents and returns them.
 
         Applies the deltas between two versions of the target collection. It
         uses the given deltas grouped by document and sorted by the direction
@@ -740,8 +767,8 @@ class DeltasCollection(_BaseTrackerCollection):
 
     @staticmethod
     def _process_deltas(
-            item: Tuple[Any, List[Delta]],
-            documents: Dict[Any, _DOCUMENT_TYPE] = None
+        item: Tuple[Any, List[Delta]],
+        documents: Dict[Any, _DOCUMENT_TYPE] = None,
     ) -> Tuple[Any, _DOCUMENT_TYPE]:
         doc_id, deltas = item
         # Documents that have to be created do not exist at all in the
@@ -757,11 +784,11 @@ class DeltasCollection(_BaseTrackerCollection):
         return doc_id, document
 
     def delete_subtrees(
-            self,
-            root: Tuple[int, str],
-            leaves: List[Tuple[int, str]]
+        self,
+        root: Tuple[int, str],
+        leaves: List[Tuple[int, str]],
     ) -> None:
-        """ Deletes the deltas registered after a specific version.
+        """Delete the deltas registered after a specific version.
 
         :param root: The root of the subtree of the version tree from which
             deltas will be removed.

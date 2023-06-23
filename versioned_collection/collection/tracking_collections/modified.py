@@ -7,12 +7,13 @@ from typing import Dict, List, Union
 from bson import ObjectId
 from pymongo.database import Database
 
-from versioned_collection.collection.tracking_collections import \
-    _BaseTrackerCollection
+from versioned_collection.collection.tracking_collections import (
+    _BaseTrackerCollection,
+)
 
 
 class ModifiedCollection(_BaseTrackerCollection):
-    """ Stores references to the documents that were modified and untracked.
+    """Stores references to the documents that were modified and untracked.
 
     A temporary collection created upon the initialisation for tracking of a
     target collection. The documents in this collection store references to the
@@ -32,6 +33,7 @@ class ModifiedCollection(_BaseTrackerCollection):
     events that modified the target document, which can be restored by
     comparing the tracking document ids, i.e., the ``_id`` field.
     """
+
     _NAME_TEMPLATE = '__modified_{}'
 
     @dataclasses.dataclass
@@ -47,19 +49,18 @@ class ModifiedCollection(_BaseTrackerCollection):
         # update or replace ('u') or delete ('d')
         op: str
 
-    def __init__(self,
-                 database: Database,
-                 parent_collection_name: str,
-                 **kwargs
-                 ) -> None:
+    def __init__(
+        self, database: Database, parent_collection_name: str, **kwargs
+    ) -> None:
         super().__init__(database, parent_collection_name, **kwargs)
 
     def has_changes(self) -> bool:
         return self.count_documents({}) > 0
 
-    def find_modified_documents_ids(self) \
-            -> List[Dict[str, Union[ObjectId, List[ObjectId]]]]:
-        """ Returns the ids of the modified documents.
+    def find_modified_documents_ids(
+        self,
+    ) -> List[Dict[str, Union[ObjectId, List[ObjectId]]]]:
+        """Return the ids of the modified documents.
 
         :return: A list of documents containing the ids of the modified
             documents in the tracked collection and the ids of the trackers
@@ -67,13 +68,14 @@ class ModifiedCollection(_BaseTrackerCollection):
         """
         docs = self.aggregate([
             {"$match": {}},
-            {"$group": {'_id': "$id", 'tracker_ids': {"$push": "$_id"}}}
+            {"$group": {'_id': "$id", 'tracker_ids': {"$push": "$_id"}}},
         ])
         return list(docs)
 
-    def get_modified_document_ids_by_operation(self) \
-            -> Dict[str, List[ObjectId]]:
-        """ Returns the document ids grouped by the operation type.
+    def get_modified_document_ids_by_operation(
+        self,
+    ) -> Dict[str, List[ObjectId]]:
+        """Return the document ids grouped by the operation type.
 
         :return: The list of ids of the modified documents grouped by the
             type of the modifying operation. The valid types are ``'i'`` for
@@ -87,7 +89,7 @@ class ModifiedCollection(_BaseTrackerCollection):
         return dict(docs_per_operation)
 
     def delete_modified(self, ids: List[ObjectId]) -> None:
-        """ Deletes the tracked documents from this collection.
+        """Delete the tracked documents from this collection.
 
         .. note::
             This deletes only one of the modification trackers. A document

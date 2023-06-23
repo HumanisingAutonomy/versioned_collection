@@ -3,24 +3,28 @@ from __future__ import annotations
 from pymongo.collection import Collection
 from pymongo.database import Database
 
-from versioned_collection.collection.tracking_collections import \
-    _BaseTrackerCollection, ModifiedCollection
+from versioned_collection.collection.tracking_collections import (
+    _BaseTrackerCollection,
+    ModifiedCollection,
+)
 
 
 class StashCollection(_BaseTrackerCollection):
-    """ Stores the stash data of a collection """
+    """Stores the stash data of a collection"""
+
     _NAME_TEMPLATE = '__stash_{}'
 
-    def __init__(self,
-                 database: Database,
-                 parent_collection_name: str,
-                 **kwargs
-                 ) -> None:
+    def __init__(
+        self,
+        database: Database,
+        parent_collection_name: str,
+        **kwargs,
+    ) -> None:
         super().__init__(database, parent_collection_name, **kwargs)
 
 
 class StashContainer:
-    """ Container class managing the stash area.
+    """Container class managing the stash area.
 
     When the state of the tracked collection is stashed, the modified
     documents of the tracked collection and the tracking documents from the
@@ -31,11 +35,12 @@ class StashContainer:
 
     """
 
-    def __init__(self,
-                 database: Database,
-                 parent_collection_name: str,
-                 **kwargs
-                 ) -> None:
+    def __init__(
+        self,
+        database: Database,
+        parent_collection_name: str,
+        **kwargs,
+    ) -> None:
         self.main_collection = StashCollection(
             database, parent_collection_name, **kwargs
         )
@@ -58,11 +63,11 @@ class StashContainer:
         return main_exists
 
     def stash(
-            self,
-            main_collection: Collection,
-            modified_collection: ModifiedCollection
+        self,
+        main_collection: Collection,
+        modified_collection: ModifiedCollection,
     ) -> None:
-        """ Copies the modified documents and the trackers to the stashing space
+        """Copy the modified documents and the trackers to the stashing space.
 
         .. note::
             This does not modify the original collections.
@@ -77,22 +82,21 @@ class StashContainer:
         self.modified_collection.drop()
         self.main_collection.drop()
 
-        modified_collection.aggregate([
-            {"$match": {}},
-            {"$out": self.modified_collection.name}
-        ])
+        modified_collection.aggregate(
+            [{"$match": {}}, {"$out": self.modified_collection.name}]
+        )
         ids = list({doc['id'] for doc in modified_collection.find()})
         main_collection.aggregate([
             {"$match": {'_id': {"$in": ids}}},
-            {"$out": self.main_collection.name}
+            {"$out": self.main_collection.name},
         ])
 
     def stash_apply(
-            self,
-            main_collection: Collection,
-            modified_collection: ModifiedCollection
+        self,
+        main_collection: Collection,
+        modified_collection: ModifiedCollection,
     ) -> None:
-        """ Applies the stash to restore the main collection.
+        """Apply the stash to restore the main collection.
 
         :param main_collection: The tracked versioned collection
         :param modified_collection: The collection that tracks the ids of the
@@ -106,12 +110,11 @@ class StashContainer:
         if len(existing_ids):
             self.modified_collection.update_many(
                 filter={'id': {"$in": existing_ids}, 'op': 'i'},
-                update={"$set": {'op': 'u'}}
+                update={"$set": {'op': 'u'}},
             )
-        self.modified_collection.aggregate([
-            {"$match": {}},
-            {"$out": modified_collection.name}
-        ])
+        self.modified_collection.aggregate(
+            [{"$match": {}}, {"$out": modified_collection.name}]
+        )
 
         main_collection.delete_many({'_id': {"$in": ids}})
         main_collection.insert_many(list(self.main_collection.find({})))

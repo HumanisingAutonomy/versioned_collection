@@ -3,12 +3,13 @@ from typing import Optional
 
 from pymongo.database import Database
 
-from versioned_collection.collection.tracking_collections import \
-    _BaseTrackerCollection
+from versioned_collection.collection.tracking_collections import (
+    _BaseTrackerCollection,
+)
 
 
 class MetadataCollection(_BaseTrackerCollection):
-    """ Stores metadata about the current state of the target collection.
+    """Stores metadata about the current state of the target collection.
 
     This collection keeps track of the current version of the target
     versioned collection, i.e., its version and branch, and information about
@@ -30,11 +31,9 @@ class MetadataCollection(_BaseTrackerCollection):
         has_stash: bool
         has_conflicts: bool
 
-    def __init__(self,
-                 database: Database,
-                 parent_collection_name: str,
-                 **kwargs
-                 ) -> None:
+    def __init__(
+        self, database: Database, parent_collection_name: str, **kwargs
+    ) -> None:
         super().__init__(database, parent_collection_name, **kwargs)
         self._metadata: Optional[MetadataCollection.SCHEMA] = None
 
@@ -52,15 +51,15 @@ class MetadataCollection(_BaseTrackerCollection):
         self.insert_one(self._metadata.__dict__)
 
     def set_metadata(
-            self,
-            current_version: Optional[int] = None,
-            current_branch: Optional[str] = None,
-            detached: Optional[bool] = None,
-            changed: Optional[bool] = None,
-            has_stash: Optional[bool] = None,
-            has_conflicts: Optional[bool] = None,
+        self,
+        current_version: Optional[int] = None,
+        current_branch: Optional[str] = None,
+        detached: Optional[bool] = None,
+        changed: Optional[bool] = None,
+        has_stash: Optional[bool] = None,
+        has_conflicts: Optional[bool] = None,
     ) -> None:
-        """ Utility function to set some or all of the metadata attributes."""
+        """Set some or all of the metadata attributes."""
         metadata = self.metadata
         if current_version is not None:
             metadata.current_version = current_version
@@ -77,7 +76,7 @@ class MetadataCollection(_BaseTrackerCollection):
         self.metadata = metadata
 
     def build(self) -> bool:
-        """ Builds this collection on the database.
+        """Build this collection on the database.
 
         :return: ``True`` if the collection was successfully built, ``False``
             otherwise.
@@ -91,7 +90,7 @@ class MetadataCollection(_BaseTrackerCollection):
             detached=False,
             changed=False,
             has_stash=False,
-            has_conflicts=False
+            has_conflicts=False,
         )
 
         self.insert_one(self._metadata.__dict__)

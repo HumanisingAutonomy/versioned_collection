@@ -1,8 +1,8 @@
-""" Custom errors used in `versioned_collection` """
+"""Custom errors used in `versioned_collection`."""
 
 
 class CollectionAlreadyInitialised(Exception):
-    """ Raised when an initialised collection is tried to be reinitialised. """
+    """Raised when an initialised collection is tried to be reinitialised."""
 
     __DEFAULT_MESSAGE = (
         "You tried to call `init()` on an already initialised versioned "
@@ -14,14 +14,14 @@ class CollectionAlreadyInitialised(Exception):
 
 
 class InvalidOperation(Exception):
-    """ Raised when an invalid operation is attempted on the collection. """
+    """Raised when an invalid operation is attempted on the collection."""
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
 
 
 class InvalidCollectionVersion(Exception):
-    """ Raised when trying to check out to a wrong collection version. """
+    """Raised when trying to check out to a wrong collection version."""
 
     __DEFAULT_MESSAGE = (
         "You tried to checkout to an nonexistent version of the target tracked "
@@ -29,29 +29,26 @@ class InvalidCollectionVersion(Exception):
         "does not exist."
     )
 
-    def __init__(self,
-                 version: int,
-                 branch: str,
-                 message: str = __DEFAULT_MESSAGE
-                 ) -> None:
+    def __init__(
+        self, version: int, branch: str, message: str = __DEFAULT_MESSAGE
+    ) -> None:
         message = message.format(version, branch)
         super().__init__(message)
 
 
 class InvalidCollectionState(Exception):
-    """ Raised when something terrible happens. """
-    pass
+    """Raised when something terrible happens."""
 
 
 class BranchNotFound(Exception):
-    """ Raised when a branch could not be found  """
+    """Raised when a branch could not be found"""
 
     def __init__(self, branch_name: str) -> None:
         super().__init__(f"Branch '{branch_name}' does not exists!")
 
 
 class AutoMergeFailedError(Exception):
-    """ Raised when automatically merging two branches produces conflicts. """
+    """Raised when automatically merging two branches produces conflicts."""
 
     def __init__(self, branch: str) -> None:
         super().__init__(

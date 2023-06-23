@@ -70,7 +70,9 @@ class TestEventReduction(TestCase):
     def test_reduction_8(self):
         self.assertEqual(
             'i',
-            reduce_event_sequence(['i', 'u', 'd', 'i', 'u', 'u', 'd', 'i', 'u'])
+            reduce_event_sequence(
+                ['i', 'u', 'd', 'i', 'u', 'u', 'd', 'i', 'u']
+            ),
         )
 
     def test_reduction_9(self):
