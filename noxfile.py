@@ -48,6 +48,7 @@ def tests(session: nox.Session):
 def install(session: nox.Session):
     session.run("pip", "install", "-r", "docs/requirements.txt")
     session.run("pip", "install", "-r", "requirements.txt")
+    session.run("pip", "install", ".")
 
 
 @nox.session(python=False)

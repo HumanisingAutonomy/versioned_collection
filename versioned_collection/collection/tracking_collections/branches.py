@@ -33,11 +33,11 @@ class BranchesCollection(_BaseTrackerCollection):
         points_to_branch: str
 
         def __hash__(self) -> int:
-            return (
-                31 * hash(self.name)
-                + 59 * hash(self.points_to_branch)
-                + 83 * hash(self.points_to_collection_version)
-            )
+            return hash((
+                self.name,
+                self.points_to_branch,
+                self.points_to_collection_version
+            ))
 
         def __eq__(self, other: BranchesCollection.SCHEMA) -> bool:
             if not isinstance(other, BranchesCollection.SCHEMA):
