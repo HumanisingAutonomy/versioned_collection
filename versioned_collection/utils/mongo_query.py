@@ -7,24 +7,28 @@ from versioned_collection.utils.data_structures import hashabledict
 
 
 def group_documents_by_id(
-        documents: Union[List[Dict[str, Any]], Cursor[Dict[str, Any]]]
+    documents: Union[List[Dict[str, Any]], Cursor[Dict[str, Any]]]
 ) -> Dict[Any, Dict[str, Any]]:
-    return dict([
-        (doc['_id'], doc) if not isinstance(doc['_id'], dict)
-        else (hashabledict(doc['_id']), doc)
-        for doc in documents
-    ])
+    """Group a collection of documents by id."""
+    return dict(
+        [
+            (doc['_id'], doc)
+            if not isinstance(doc['_id'], dict)
+            else (hashabledict(doc['_id']), doc)
+            for doc in documents
+        ]
+    )
 
 
 def generate_pagination_query(
-        query: Dict[str, Any],
-        sort: Optional[Tuple[str, int]] = None,
-        last_key: Optional[Dict[str, ObjectId]] = None
+    query: Dict[str, Any],
+    sort: Optional[Tuple[str, int]] = None,
+    last_key: Optional[Dict[str, ObjectId]] = None,
 ) -> Tuple[
     Dict[str, Any],
-    Callable[[List[Dict[str, Any]]], Optional[Dict[str, ObjectId]]]
+    Callable[[List[Dict[str, Any]]], Optional[Dict[str, ObjectId]]],
 ]:
-    """ Generates a pagination query.
+    """Generate a pagination query.
 
     :param query: The base query.
     :param sort: The field use to sort and the direction of sorting.
@@ -57,6 +61,7 @@ def generate_pagination_query(
 
     sort_operator = '$gt' if sort[1] == 1 else '$lt'
 
+    # fmt: off
     pagination_query = [
         {sort_field: {sort_operator: last_key[sort_field]}},
         {'$and': [

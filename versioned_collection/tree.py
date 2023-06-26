@@ -1,4 +1,4 @@
-""" Helper datastructures.
+"""Helper datastructures.
 
 These extend the ``treelib`` library ``Node`` and ``Tree`` classes by adding
 comparisons and equality functionalities used to compare log trees.
@@ -11,15 +11,15 @@ from versioned_collection.utils.data_structures import hashabledict
 
 
 class Node(_Node):
+
     def __hash__(self) -> int:
-        _hash = 23 * hash(self.identifier)
-        _hash += 31 * hash(self.tag)
+        to_hash = [self.identifier, self.tag]
         if self.data is not None:
             data = self.data
             if isinstance(self.data, dict):
                 data = hashabledict(data)
-            _hash += 131 * hash(data)
-        return _hash
+            to_hash.append(data)
+        return hash(tuple(to_hash))
 
     def __eq__(self, other: object) -> bool:
         if other is None:
@@ -28,16 +28,19 @@ class Node(_Node):
             return False
         if other is self:
             return True
-        return self.tag == other.tag and \
-            self.identifier == other.identifier and \
-            self.data == other.data and \
-            self.predecessor(self.identifier) == \
-            other.predecessor(self.identifier) and \
-            set(self.successors(self.identifier)) == \
-            set(other.successors(self.identifier))
+        return (
+            self.tag == other.tag
+            and self.identifier == other.identifier
+            and self.data == other.data
+            and self.predecessor(self.identifier)
+            == other.predecessor(self.identifier)
+            and set(self.successors(self.identifier))
+            == set(other.successors(self.identifier))
+        )
 
 
 class Tree(_Tree):
+
     def __init__(self, tree=None, deep=False, node_class=None, identifier=None):
         if node_class is None:
             node_class = Node
@@ -76,9 +79,11 @@ class Tree(_Tree):
             that_node: Node = to_visit_there.pop(0)
 
             # The nodes should be the same
-            if this_node.identifier != that_node.identifier or \
-                    this_node.tag != that_node.tag or \
-                    this_node.data != that_node.data:
+            if (
+                this_node.identifier != that_node.identifier
+                or this_node.tag != that_node.tag
+                or this_node.data != that_node.data
+            ):
                 return False
 
             # The nodes should have the same number of children

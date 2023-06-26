@@ -12,6 +12,7 @@ def stringify_object_id(oid: ObjectId) -> str:
 
 def stringify_document(document: Dict[str, Any]) -> str:
     class ObjectIdEncoder(json.JSONEncoder):
+
         def default(self, obj):
             if isinstance(obj, ObjectId):
                 return stringify_object_id(obj)

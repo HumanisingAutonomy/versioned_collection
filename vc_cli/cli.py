@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" A helper script to ease the interaction with a `VersionCollection`. """
+"""A helper script to ease the interaction with a `VersionCollection`."""
 import getpass
 import itertools
 import os.path
@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from configparser import ConfigParser
 from functools import partial
 from os.path import expanduser
-from threading import Thread, currentThread
+from threading import Thread, current_thread
 from typing import Any, Tuple, Optional, Callable
 
 from colorama import Fore
@@ -31,19 +31,21 @@ _REMOTE_DB_SECTION = 'remote'
 
 def _check_config_exits() -> None:
     if not os.path.exists(_CONFIG_DIR) or not os.path.exists(_CONFIG_FILE_PTH):
-        _error("Error: Missing configuration.\n"
-               "\tPlease run `vc config` before")
+        _error(
+            "Error: Missing configuration.\n" "\tPlease run `vc config` before"
+        )
         exit(-1)
 
 
 def _check_config_section_exists(
-        config_file: ConfigParser,
-        location: str = _LOCAL_DB_SECTION
+    config_file: ConfigParser, location: str = _LOCAL_DB_SECTION
 ) -> None:
     if not config_file.has_section(location):
         _loc_flag = '' if location == _LOCAL_DB_SECTION else '--remote'
-        _error(f"Error: Missing {location} configuration.\n"
-               f"\tPlease run `vc config` {_loc_flag} before")
+        _error(
+            f"Error: Missing {location} configuration.\n"
+            f"\tPlease run `vc config` {_loc_flag} before"
+        )
         exit(-1)
 
 
@@ -54,25 +56,28 @@ def _get_config_file() -> ConfigParser:
     return config_file
 
 
-def _check_db_col_set(config_file: ConfigParser,
-                      location: str = _LOCAL_DB_SECTION
-                      ) -> None:
+def _check_db_col_set(
+    config_file: ConfigParser, location: str = _LOCAL_DB_SECTION
+) -> None:
     _check_config_section_exists(config_file, location)
     section = config_file[location]
     if 'database' not in section or 'collection' not in section:
         _loc_flag = '' if location == _LOCAL_DB_SECTION else '--remote'
-        _error("Error: Missing database and collection details.\n"
-               f"\tRun `vc use {_loc_flag}` before.")
+        _error(
+            "Error: Missing database and collection details.\n"
+            f"\tRun `vc use {_loc_flag}` before."
+        )
         exit(-1)
 
 
 def _get_current_database_and_collection(
-        config_file: ConfigParser,
-        location: str = _LOCAL_DB_SECTION
+    config_file: ConfigParser, location: str = _LOCAL_DB_SECTION
 ) -> Tuple[str, str]:
     _check_db_col_set(config_file)
-    return config_file[location]['database'], \
-        config_file[location]['collection']
+    return (
+        config_file[location]['database'],
+        config_file[location]['collection'],
+    )
 
 
 def _error(msg: str) -> None:
@@ -84,8 +89,8 @@ def _info(msg: Any) -> None:
 
 
 def _load_versioned_collection(
-        config_file: Optional[ConfigParser] = None,
-        location: str = _LOCAL_DB_SECTION
+    config_file: Optional[ConfigParser] = None,
+    location: str = _LOCAL_DB_SECTION,
 ) -> VersionedCollection:
     if config_file is None:
         config_file = _get_config_file()
@@ -97,14 +102,14 @@ def _load_versioned_collection(
         host=mongo_cfg['host'],
         port=int(mongo_cfg['port']),
         username=mongo_cfg.get('username', None),
-        password=mongo_cfg.get('password', None)
+        password=mongo_cfg.get('password', None),
     )
 
     vc = VersionedCollection(
         database=client[mongo_cfg['database']],
         name=mongo_cfg['collection'],
         username=mongo_cfg.get('username', None),
-        password=mongo_cfg.get('password', None)
+        password=mongo_cfg.get('password', None),
     )
     return vc
 
@@ -112,7 +117,7 @@ def _load_versioned_collection(
 def _start_spinner(message: str) -> None:
     spinner = itertools.cycle(['-', '/', '|', '\\'])
     print(message, end=' ')
-    t = currentThread()
+    t = current_thread()
     while getattr(t, "spin", True):
         sys.stdout.write(next(spinner))
         sys.stdout.flush()
@@ -122,10 +127,7 @@ def _start_spinner(message: str) -> None:
 
 
 def _run_with_spinner(fn: Callable[..., Any], spinner_message: str) -> bool:
-    spinner_thread = Thread(
-        target=_start_spinner,
-        args=(spinner_message,)
-    )
+    spinner_thread = Thread(target=_start_spinner, args=(spinner_message,))
     spinner_thread.spin = True
     spinner_thread.start()
 
@@ -145,11 +147,13 @@ def use(args):
     config_file = _get_config_file()
 
     vc = _LOCAL_DB_SECTION if args.local else _REMOTE_DB_SECTION
-    if (vc in config_file and
-            'database' in config_file[vc]
-            and config_file[vc]['database'] == args.database and
-            'collection' in config_file[vc]
-            and config_file[vc]['collection'] == args.collection):
+    if (
+        vc in config_file
+        and 'database' in config_file[vc]
+        and config_file[vc]['database'] == args.database
+        and 'collection' in config_file[vc]
+        and config_file[vc]['collection'] == args.collection
+    ):
         return
     else:
         if not config_file.has_section(vc):
@@ -178,8 +182,10 @@ def config(args):
     if args.username is not None:
         mongo_cfg['username'] = args.username
         if args.password is None:
-            _error("Error: Username provided without password. \n"
-                   "\tInclude --password in your command.")
+            _error(
+                "Error: Username provided without password. \n"
+                "\tInclude --password in your command."
+            )
             exit(-1)
         else:
             if args.password == "prompt":
@@ -189,9 +195,11 @@ def config(args):
             mongo_cfg['password'] = password
 
     if not args.local and args.host is None:
-        _error("Error: Tried to configure the remote database, but no host "
-               "address was provided.\n\tInclude --host in your command if "
-               "--remote is set.")
+        _error(
+            "Error: Tried to configure the remote database, but no host "
+            "address was provided.\n\tInclude --host in your command if "
+            "--remote is set."
+        )
         exit(-1)
 
     mongo_cfg['host'] = 'localhost' if args.host is None else args.host
@@ -205,24 +213,28 @@ def config_show(_) -> None:
     _get_config_file().write(sys.stdout)
 
 
-def _print_remote_status(local: VersionedCollection,
-                         remote: VersionedCollection
-                         ) -> None:
+def _print_remote_status(
+    local: VersionedCollection, remote: VersionedCollection
+) -> None:
     if local == remote:
         print(Fore.YELLOW + "Local and remote have all branches synchronised")
     elif not (local <= remote or remote <= local):
-        print(Fore.YELLOW +
-              "Local and remote have divergences. The local collection has "
-              "versions that the remote one does not have and the remote "
-              "collection has versions the local collection does not have.")
+        print(
+            Fore.YELLOW
+            + "Local and remote have divergences. The local collection has "
+            "versions that the remote one does not have and the remote "
+            "collection has versions the local collection does not have."
+        )
     else:
         # One is behind the other. Show the status just fo the current local
         # branch
         try:
             remote_log = remote.get_log(local.branch)
         except BranchNotFound:
-            print(Fore.YELLOW +
-                  f"The local branch {local.branch} does not exist on remote")
+            print(
+                Fore.YELLOW
+                + f"The local branch {local.branch} does not exist on remote"
+            )
             return
         local_log = local.get_log()
 
@@ -235,21 +247,29 @@ def _print_remote_status(local: VersionedCollection,
             # No divergence found
             dif = len(local_log) - len(remote_log)
             if dif > 0:
-                msg = f"Local branch '{local.branch}' is ahead of remote by " \
-                      f"{dif} versions"
+                msg = (
+                    f"Local branch '{local.branch}' is ahead of remote by "
+                    f"{dif} versions"
+                )
             elif dif < 0:
-                msg = f"Local branch '{local.branch}' is behind remote by " \
-                      f"{abs(dif)} versions"
+                msg = (
+                    f"Local branch '{local.branch}' is behind remote by "
+                    f"{abs(dif)} versions"
+                )
             else:
-                msg = f"Local branch '{local.branch}' is up to date " \
-                      f"with the remote branch"
+                msg = (
+                    f"Local branch '{local.branch}' is up to date "
+                    f"with the remote branch"
+                )
 
             print(Fore.YELLOW + msg)
             return
 
-        print(Fore.YELLOW + f"Local branch {local.branch} has diverged from "
-                            f"the remote branch after version "
-                            f"'{separation_point}'.")
+        print(
+            Fore.YELLOW + f"Local branch {local.branch} has diverged from "
+            f"the remote branch after version "
+            f"'{separation_point}'."
+        )
 
 
 def status(_) -> None:
@@ -270,9 +290,11 @@ def status(_) -> None:
             )
             _print_remote_status(collection, remote_collection)
         except Exception:
-            _error("Not able to get status data for the remote collection. "
-                   "Make sure that `vc` is properly configured and the remote "
-                   "collection is accessible")
+            _error(
+                "Not able to get status data for the remote collection. "
+                "Make sure that `vc` is properly configured and the remote "
+                "collection is accessible"
+            )
 
     _status = collection.status()
     changed = _status['changed']
@@ -289,8 +311,11 @@ def log(args):
     collection = _load_versioned_collection()
 
     try:
-        pager = subprocess.Popen(['less', '-F', '-R', '-X', '-K'],
-                                 stdin=subprocess.PIPE, stdout=sys.stdout)
+        pager = subprocess.Popen(
+            ['less', '-F', '-R', '-X', '-K'],
+            stdin=subprocess.PIPE,
+            stdout=sys.stdout,
+        )
         for l in collection.get_log(args.branch):
             pager.stdin.write(f"{Fore.GREEN + str(l)} \n".encode())
         pager.stdin.close()
@@ -319,12 +344,22 @@ def diff(args):
         _info("Nothing has changed since last version registered.")
 
     try:
-        pager = subprocess.Popen(['less', '-F', '-R', '-X', '-K'],
-                                 stdin=subprocess.PIPE, stdout=sys.stdout)
+        pager = subprocess.Popen(
+            ['less', '-F', '-R', '-X', '-K'],
+            stdin=subprocess.PIPE,
+            stdout=sys.stdout,
+        )
         for doc_id, diff_str in diffs.items():
             diff_str = colour_diff(diff_str)
-            pager.stdin.write(('\n' + Fore.YELLOW + f"Document {doc_id}\n"
-                               + diff_str + '\n').encode())
+            pager.stdin.write(
+                (
+                    '\n'
+                    + Fore.YELLOW
+                    + f"Document {doc_id}\n"
+                    + diff_str
+                    + '\n'
+                ).encode()
+            )
         pager.stdin.close()
         pager.wait()
     except KeyboardInterrupt:
@@ -364,10 +399,9 @@ def branches(_):
 
 def register(args):
     collection = _load_versioned_collection()
-    fn = partial(collection.register,
-                 message=args.message,
-                 branch_name=args.branch
-                 )
+    fn = partial(
+        collection.register, message=args.message, branch_name=args.branch
+    )
     _status = _run_with_spinner(fn, spinner_message='Registering a new version')
     if _status:
         _info("Successfully registered a new version.")
@@ -378,26 +412,24 @@ def register(args):
 def discard_changes(_):
     config_file = _get_config_file()
     db, col = _get_current_database_and_collection(config_file)
-    msg = f"Are you sure you want to discard the changes for <{db}>:<{col}>?" \
-          f" (y/n): "
+    msg = (
+        f"Are you sure you want to discard the changes for <{db}>:<{col}>?"
+        f" (y/n): "
+    )
     answer = input(msg).lower()
     if answer == 'n':
         return
 
     collection = _load_versioned_collection(config_file)
     _run_with_spinner(
-        collection.discard_changes,
-        spinner_message='Discarding changes'
+        collection.discard_changes, spinner_message='Discarding changes'
     )
     _info("Changes successfully discarded")
 
 
 def checkout(args):
     collection = _load_versioned_collection()
-    fn = partial(collection.checkout,
-                 version=args.version,
-                 branch=args.branch
-                 )
+    fn = partial(collection.checkout, version=args.version, branch=args.branch)
     _run_with_spinner(fn, spinner_message='Checking out')
 
     msg = "You are now"
@@ -445,11 +477,12 @@ def push(args):
     local = _load_versioned_collection()
     remote = _load_versioned_collection(location=_REMOTE_DB_SECTION)
 
-    fn = partial(local.push,
-                 remote_collection=remote,
-                 branch=args.branch,
-                 do_checkout=args.do_checkout
-                 )
+    fn = partial(
+        local.push,
+        remote_collection=remote,
+        branch=args.branch,
+        do_checkout=args.do_checkout,
+    )
 
     _status = _run_with_spinner(fn, spinner_message='Pushing to remote')
 
@@ -463,10 +496,11 @@ def pull(args):
     local = _load_versioned_collection()
     remote = _load_versioned_collection(location=_REMOTE_DB_SECTION)
 
-    fn = partial(local.pull,
-                 remote_collection=remote,
-                 branch=args.branch,
-                 )
+    fn = partial(
+        local.pull,
+        remote_collection=remote,
+        branch=args.branch,
+    )
 
     _status = _run_with_spinner(fn, spinner_message='Pulling from remote')
 
@@ -499,10 +533,11 @@ def resolve_conflicts(args):
 def delete_version(args):
     collection = _load_versioned_collection()
 
-    fn = partial(collection.delete_version_subtree,
-                 version=args.version,
-                 branch=args.branch
-                 )
+    fn = partial(
+        collection.delete_version_subtree,
+        version=args.version,
+        branch=args.branch,
+    )
     _status = _run_with_spinner(fn, spinner_message='Deleting versions')
 
     if _status:
@@ -517,7 +552,8 @@ def delete_version(args):
         else:
             version_format = ""
         msg = "You are currently {} on branch {}".format(
-            version_format, collection.branch)
+            version_format, collection.branch
+        )
         print(Fore.YELLOW + msg)
     else:
         _error("Collection untracked")
@@ -535,8 +571,7 @@ def listen(_):
 
     try:
         _run_with_spinner(
-            wait,
-            spinner_message='Listening... Press <Ctrl + c> to stop'
+            wait, spinner_message='Listening... Press <Ctrl + c> to stop'
         )
     except KeyboardInterrupt:
         _info("Listener successfully stopped")
@@ -552,52 +587,66 @@ def cli():
     parser = ArgumentParser(prog='vc')
 
     parser.add_argument(
-        '-v', '--version', action='version',
+        '-v',
+        '--version',
+        action='version',
         version=f'versioned_collection: {versioned_collection.__version__}',
-        help='Show the current versioned_collection version installed'
+        help='Show the current versioned_collection version installed',
     )
 
     subparsers = parser.add_subparsers(
         title='These are common VersionedCollection commands',
-        metavar='commands'
+        metavar='commands',
     )
 
     # config
     config_parser = subparsers.add_parser(
         'config',
-        help='Update the configuration and credentials'
+        help='Update the configuration and credentials',
     )
     _config_group = config_parser.add_mutually_exclusive_group(required=False)
     _config_group.add_argument(
-        '--local', dest='local', default=True, action='store_true',
-        help='whether to set the configuration for the local database'
+        '--local',
+        dest='local',
+        default=True,
+        action='store_true',
+        help='whether to set the configuration for the local database',
     )
     _config_group.add_argument(
-        '--remote', dest='local', action='store_false',
-        help='whether to set the configuration for the remote database'
+        '--remote',
+        dest='local',
+        action='store_false',
+        help='whether to set the configuration for the remote database',
     )
     config_parser.add_argument(
-        '--username', type=str, default=None,
-        help='user with access to the database'
+        '--username',
+        type=str,
+        default=None,
+        help='user with access to the database',
     )
     config_parser.add_argument(
-        '--password', nargs='?', const='prompt',
+        '--password',
+        nargs='?',
+        const='prompt',
         help='password to access the database. '
-             'if unfilled, a prompt will appear.'
+        'if unfilled, a prompt will appear.',
     )
     config_parser.add_argument(
-        '--host', type=str, default=None,
-        help='host address of the mongodb server'
+        '--host',
+        type=str,
+        default=None,
+        help='host address of the mongodb server',
     )
     config_parser.add_argument(
-        '--port', type=int, default=27017,
-        help='port of the mongodb server'
+        '--port',
+        type=int,
+        default=27017,
+        help='port of the mongodb server',
     )
     config_parser.set_defaults(handle=config)
 
     config_subparser = config_parser.add_subparsers(
-        title='The available subcommands',
-        metavar='commands'
+        title='The available subcommands', metavar='commands'
     )
 
     # ##  config show
@@ -609,144 +658,178 @@ def cli():
 
     # use
     use_parser = subparsers.add_parser(
-        'use',
-        help='Set the database and the collection to use'
+        'use', help='Set the database and the collection to use'
     )
     _use_group = use_parser.add_mutually_exclusive_group(required=False)
     _use_group.add_argument(
-        '--local', dest='local', default=True, action='store_true',
+        '--local',
+        dest='local',
+        default=True,
+        action='store_true',
         help='whether to update the collection and database names for the '
-             'local collection'
+        'local collection',
     )
     _use_group.add_argument(
-        '--remote', dest='local', action='store_false',
+        '--remote',
+        dest='local',
+        action='store_false',
         help='whether to update the collection and database names for the '
-             'remote collection'
+        'remote collection',
     )
     use_parser.add_argument(
-        '-d', '--database', type=str, required=True,
-        help='database containing the versioned collection'
+        '-d',
+        '--database',
+        type=str,
+        required=True,
+        help='database containing the versioned collection',
     )
     use_parser.add_argument(
-        '-c', '--collection', type=str, required=True,
-        help='name of the versioned collection'
+        '-c',
+        '--collection',
+        type=str,
+        required=True,
+        help='name of the versioned collection',
     )
     use_parser.set_defaults(handle=use)
 
     # status
     status_parser = subparsers.add_parser(
         'status',
-        help='Show the status of the version tree'
+        help='Show the status of the version tree',
     )
     status_parser.set_defaults(handle=status)
 
     # init
     init_parser = subparsers.add_parser(
         'init',
-        help='Initialise a collection for versioning'
+        help='Initialise a collection for versioning',
     )
     init_parser.add_argument(
-        '-m', '--message', type=str, default=None,
-        help='initialise a collection for versioning'
+        '-m',
+        '--message',
+        type=str,
+        default=None,
+        help='initialise a collection for versioning',
     )
     init_parser.set_defaults(handle=init)
 
     # create_branch
     branch_parser = subparsers.add_parser(
         'create_branch',
-        help='Create a new branch pointing at the current version'
+        help='Create a new branch pointing at the current version',
     )
     branch_parser.add_argument(
-        'branch_name', type=str,
-        help='name of the new branch'
+        'branch_name', type=str, help='name of the new branch'
     )
     branch_parser.set_defaults(handle=create_branch)
 
     # register
     register_parser = subparsers.add_parser(
         'register',
-        help='Register a new version of the collection'
+        help='Register a new version of the collection',
     )
     register_parser.add_argument(
-        '-m', '--message', type=str, required=True,
-        help='message that describes the changes in this version'
+        '-m',
+        '--message',
+        type=str,
+        required=True,
+        help='message that describes the changes in this version',
     )
     register_parser.add_argument(
-        '-b', '--branch', type=str, default=None,
-        help='branch where the version should be registered'
+        '-b',
+        '--branch',
+        type=str,
+        default=None,
+        help='branch where the version should be registered',
     )
     register_parser.set_defaults(handle=register)
 
     # checkout
     checkout_parser = subparsers.add_parser(
         'checkout',
-        help='Check out a tracked version of the collection'
+        help='Check out a tracked version of the collection',
     )
     checkout_parser.add_argument(
-        'version', type=int, default=None,
-        help='the version to check out'
+        'version',
+        type=int,
+        default=None,
+        help='the version to check out',
     )
     checkout_parser.add_argument(
-        '-b', '--branch', type=str, default=None,
-        help='the branch of the version to check out'
+        '-b',
+        '--branch',
+        type=str,
+        default=None,
+        help='the branch of the version to check out',
     )
     checkout_parser.set_defaults(handle=checkout)
 
     # log
-    log_parser = subparsers.add_parser(
-        'log',
-        help='Show version logs'
+    log_parser = subparsers.add_parser('log', help='Show version logs')
+    log_parser.add_argument(
+        '-b',
+        '--branch',
+        type=str,
+        default=None,
+        help='the branch for which to get the log',
     )
     log_parser.add_argument(
-        '-b', '--branch', type=str, default=None,
-        help='the branch for which to get the log'
+        '--tree',
+        action='store_true',
     )
-    log_parser.add_argument('--tree', action='store_true')
     log_parser.set_defaults(handle=log)
 
     # branches
     get_branches_parser = subparsers.add_parser(
         'branches',
-        help='Show the existing branches of the collection'
+        help='Show the existing branches of the collection',
     )
     get_branches_parser.set_defaults(handle=branches)
 
     # diff
     diff_parser = subparsers.add_parser(
         'diff',
-        help='Compute the diff between the current version and another version'
+        help='Compute the diff between the current version and another version',
     )
     diff_parser.add_argument(
-        '-v', '--version', type=int, default=None,
-        help='the version against which to compute the diff'
+        '-v',
+        '--version',
+        type=int,
+        default=None,
+        help='the version against which to compute the diff',
     )
     diff_parser.add_argument(
-        '-b', '--branch', type=str, default=None,
-        help='the branch of the version against which to compute the diff'
+        '-b',
+        '--branch',
+        type=str,
+        default=None,
+        help='the branch of the version against which to compute the diff',
     )
     diff_parser.set_defaults(handle=diff)
 
     # discard changes
     reset_parser = subparsers.add_parser(
         'discard_changes',
-        help='Discard the unregistered changes of the collection'
+        help='Discard the unregistered changes of the collection',
     )
     reset_parser.set_defaults(handle=discard_changes)
 
     # stash
     stash_parser = subparsers.add_parser(
         'stash',
-        help='Stash the changes of the collection. See subcommand for help'
+        help='Stash the changes of the collection. See subcommand for help',
     )
     stash_parser.add_argument(
-        '--overwrite', type=bool, default=False,
-        help='overwrite the current stash area'
+        '--overwrite',
+        type=bool,
+        default=False,
+        help='overwrite the current stash area',
     )
     stash_parser.set_defaults(handle=stash)
 
     stash_subparsers = stash_parser.add_subparsers(
         title='The available subcommands',
-        metavar='commands'
+        metavar='commands',
     )
 
     # ##  stash apply
@@ -766,60 +849,70 @@ def cli():
     # delete version
     delete_version_parser = subparsers.add_parser(
         'delete_version',
-        help='Delete a version and all the successor versions of it'
+        help='Delete a version and all the successor versions of it',
     )
     delete_version_parser.add_argument(
-        '-v', '--version', type=int, default=None,
-        help='the version to delete'
+        '-v',
+        '--version',
+        type=int,
+        default=None,
+        help='the version to delete',
     )
     delete_version_parser.add_argument(
-        '-b', '--branch', type=str, default=None,
-        help='the branch of the version to delete'
+        '-b',
+        '--branch',
+        type=str,
+        default=None,
+        help='the branch of the version to delete',
     )
     delete_version_parser.set_defaults(handle=delete_version)
 
     # push
     push_parser = subparsers.add_parser(
         'push',
-        help='Update remote collection by uploading a branch to it'
+        help='Update remote collection by uploading a branch to it',
     )
     push_parser.add_argument(
-        '-b', '--branch', type=str, default=None,
-        help='the branch to push'
+        '-b',
+        '--branch',
+        type=str,
+        default=None,
+        help='the branch to push',
     )
     push_parser.add_argument(
-        '--do_checkout', type=bool, default=True,
+        '--do_checkout',
+        type=bool,
+        default=True,
         help='checks out the latest pushed version if remote is on the pushed '
-             'branch'
+        'branch',
     )
     push_parser.set_defaults(handle=push)
 
     # pull
     pull_parser = subparsers.add_parser(
         'pull',
-        help='Fetch from and integrate a branch from a remote collection'
+        help='Fetch from and integrate a branch from a remote collection',
     )
     pull_parser.add_argument(
-        '-b', '--branch', type=str, default=None,
-        help='the branch to pull'
+        '-b', '--branch', type=str, default=None, help='the branch to pull'
     )
     pull_parser.set_defaults(handle=pull)
 
     # resolve conflicts
     conflicts_parser = subparsers.add_parser(
-        'resolve_conflicts',
-        help='Resolve the merge conflicts'
+        'resolve_conflicts', help='Resolve the merge conflicts'
     )
     conflicts_parser.add_argument(
-        '--discard_local_changes', type=bool, default=False,
-        help='ignore the local changes and keep the remote documents only'
+        '--discard_local_changes',
+        type=bool,
+        default=False,
+        help='ignore the local changes and keep the remote documents only',
     )
     conflicts_parser.set_defaults(handle=resolve_conflicts)
 
     # listen
     listen_parser = subparsers.add_parser(
-        'listen',
-        help='Start monitoring the changes made to the collection.'
+        'listen', help='Start monitoring the changes made to the collection.'
     )
     listen_parser.set_defaults(handle=listen)
 

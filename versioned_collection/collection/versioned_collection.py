@@ -10,7 +10,15 @@ from functools import partial, wraps
 from multiprocessing import cpu_count, Pool
 from shutil import rmtree
 from typing import (
-    Optional, List, Any, Dict, Tuple, Union, Set, overload, Literal,
+    Optional,
+    List,
+    Any,
+    Dict,
+    Tuple,
+    Union,
+    Set,
+    overload,
+    Literal,
 )
 
 import pymongo
@@ -32,27 +40,33 @@ from versioned_collection.collection.tracking_collections import (
     LockCollection,
 )
 from versioned_collection.errors import (
-    CollectionAlreadyInitialised, InvalidOperation,
-    InvalidCollectionVersion, InvalidCollectionState,
-    BranchNotFound, AutoMergeFailedError
+    CollectionAlreadyInitialised,
+    InvalidOperation,
+    InvalidCollectionVersion,
+    InvalidCollectionState,
+    BranchNotFound,
+    AutoMergeFailedError,
 )
 from versioned_collection.listener import CollectionListener
 from versioned_collection.tree import Tree
 from versioned_collection.utils.mongo_query import (
-    group_documents_by_id, generate_pagination_query
+    group_documents_by_id,
+    generate_pagination_query,
 )
 from versioned_collection.utils.multi_processing import chunk_list
 from versioned_collection.utils.serialization import (
-    stringify_object_id, stringify_document, parse_json_document
+    stringify_object_id,
+    stringify_document,
+    parse_json_document,
 )
 
 
 def _collection_modified_by_pipeline(
     pipeline: List[Dict[str, Any]],
     collection_name: str,
-    database_name: str
+    database_name: str,
 ) -> bool:
-    """ Checks an aggregation pipeline for collection changes.
+    """Check an aggregation pipeline for collection changes.
 
     The only way an aggregation pipeline can modify a collection is by using
     the ``$out`` or ``$merge`` operators, which are always last in the pipeline.
@@ -64,13 +78,12 @@ def _collection_modified_by_pipeline(
         that modify the collection with `collection_name`, located on
         database with name `database_name`, ``False`` otherwise.
     """
-    if (
-        not len(pipeline)
-        or not ("$out" in pipeline[-1] or "$merge" in pipeline[-1])
+    if not len(pipeline) or not (
+        "$out" in pipeline[-1] or "$merge" in pipeline[-1]
     ):
         return False
 
-    for operator, argument in pipeline[-1].items():
+    for argument in pipeline[-1].values():
         if isinstance(argument, str) and argument == collection_name:
             return True
         elif isinstance(argument, dict):
@@ -85,7 +98,7 @@ def _collection_modified_by_pipeline(
 
 
 class VersionedCollection(Collection):
-    """ A tracked and versioned MongoDB collection.
+    """A tracked and versioned MongoDB collection.
 
     .. warning::
         All the interactions with the collection should be done through this
@@ -129,14 +142,15 @@ class VersionedCollection(Collection):
 
     """
 
-    def __init__(self,
-                 database: Database,
-                 name: Optional[str] = None,
-                 username: Optional[str] = None,
-                 password: Optional[str] = None,
-                 **kwargs
-                 ) -> None:
-        """ Constructs a new :class:`VersionedCollection`.
+    def __init__(
+        self,
+        database: Database,
+        name: Optional[str] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        **kwargs,
+    ) -> None:
+        """Initialise a new :class:`VersionedCollection`.
 
         .. note::
             If access control is enabled then the username and the password of
@@ -149,13 +163,12 @@ class VersionedCollection(Collection):
         to properly handle conflicts and make sure the collection is on the
         correct state after the conflicts have been solved,
 
-        :param db: A :class:`pymongo.database.Database` instance.
+        :param database: A :class:`pymongo.database.Database` instance.
         :param name: The name of the collection. If not given, it will
             default to the lower-cased class name.
         :param username: The name of a user that has access to `database`.
         :param password: The password of a user that has access to `database`.
         """
-
         if name is None:
             name = type(self).__name__.lower()
         super(VersionedCollection, self).__init__(database, name, **kwargs)
@@ -166,8 +179,10 @@ class VersionedCollection(Collection):
 
         # A versioned collection is tracked if there exists a log book in the
         # database associated to it.
-        self._tracked = LogsCollection.format_name(self.name) in \
-                        self.database.list_collection_names()
+        self._tracked = (
+            LogsCollection.format_name(self.name)
+            in self.database.list_collection_names()
+        )
 
         self._locked: Optional[bool] = None
         self._should_reload_tracking_cache = False
@@ -176,24 +191,25 @@ class VersionedCollection(Collection):
             self._load_lock_collection()
             self._load_tracking_collections()
             self._start_listener()
-            self._current_version = \
+            self._current_version = (
                 self._meta_collection.metadata.current_version
-            self._current_branch = \
-                self._meta_collection.metadata.current_branch
+            )
+            self._current_branch = self._meta_collection.metadata.current_branch
 
     def __del__(self):
         if self._tracked:
             self._listener.stop()
 
     def __hash__(self) -> int:
-        branches = sorted([
-            b.name for b in self._branches_collection.get_empty_branches()
-        ])
+        branches = sorted(
+            [b.name for b in self._branches_collection.get_empty_branches()]
+        )
         branches_hash = hash('__'.join(branches))
         return hash((self.name, branches_hash, self.versiontree))
 
     def __eq__(self, other: object) -> bool:
-        """
+        """Check for equality.
+
         Two :class:`VersionCollection` objects are equal if they have the
         same name and the same version trees. The log tree is almost the
         version tree, but it misses the empty branches pointers, so those
@@ -201,9 +217,8 @@ class VersionedCollection(Collection):
 
         .. note::
             Equality assumes the equality of the versioning data, but not
-            of the data itself.
+            of the data stored in the collection.
         """
-
         if other is None:
             return False
         if not isinstance(other, VersionedCollection):
@@ -230,7 +245,7 @@ class VersionedCollection(Collection):
         return self.version_tree == other.version_tree
 
     def _is_sub_collection_of(self, other: object, strict: bool) -> bool:
-        """ Checks if this collection is and 'older' version of `other`.
+        """Check if this collection is and 'older' version of `other`.
 
         To compare the collections we have to compare the version trees.
         Since the version tree structure is formed by the combination of the
@@ -241,6 +256,9 @@ class VersionedCollection(Collection):
             * The set of empty branches of the two collections, since those
               are not recorded in the log tree, since they have no version
               registered on them.
+
+        :raises TypeError: If `other` is not a :class:`VersionedCollection`.
+        :raises ValueError: If `other` has a different name.
 
         :param other: The other object to compare.
         :param strict: To check if ``self < other`` or ``self <= other``
@@ -287,15 +305,13 @@ class VersionedCollection(Collection):
             ret = (
                 self.version_tree < other.version_tree
                 and len(these_empty_branches) <= len(those_empty_branches)
-                or
-                self.version_tree == other.version_tree
+                or self.version_tree == other.version_tree
                 and len(these_empty_branches) < len(those_empty_branches)
             )
         else:
-            ret = (
-                self.version_tree <= other.version_tree
-                and len(these_empty_branches) <= len(those_empty_branches)
-            )
+            ret = self.version_tree <= other.version_tree and len(
+                these_empty_branches
+            ) <= len(those_empty_branches)
         return ret
 
     def __lt__(self, other: object) -> bool:
@@ -312,7 +328,7 @@ class VersionedCollection(Collection):
 
     @property
     def version(self) -> Optional[int]:
-        """ Returns the current version id of this collection.
+        """Get the current version id of this collection.
 
         If the collection is not tracked, it returns ``None``.
         """
@@ -320,7 +336,7 @@ class VersionedCollection(Collection):
 
     @property
     def branch(self) -> Optional[str]:
-        """ Returns the current branch name of this collection.
+        """Get the current branch name of this collection.
 
         If the collection is not tracked, it returns ``None``.
         """
@@ -328,11 +344,11 @@ class VersionedCollection(Collection):
 
     @property
     def version_tree(self) -> Optional[Tree]:
-        """ Returns the tree of register versions of this collection. """
+        """Get the tree of register versions of this collection."""
         return self._log_collection.log_tree
 
-    def _check_for_changes(op: str):
-        """ Checks if the operation has modified the collection.
+    def _check_for_changes(op: str):  # noqa: B902
+        """Check if the operation has modified the collection.
 
         A decorator inspecting the result returned by various potentially
         collection modifying MongoDB operations and deciding whether a
@@ -372,11 +388,13 @@ class VersionedCollection(Collection):
                     # operation has completed, so it won't be ``None`` and we
                     # can still catch it.
                     if function.__name__ in {
-                        'find_one_and_replace', 'find_one_and_update'
+                        'find_one_and_replace',
+                        'find_one_and_update',
                     }:
                         if (
                             kwargs.get('upsert', False)
-                            or len(args) >= 5 and args[4]
+                            or len(args) >= 5
+                            and args[4]
                         ):
                             # `upsert` is the 5th argument
                             self._has_changed()
@@ -391,14 +409,16 @@ class VersionedCollection(Collection):
                     if _collection_modified_by_pipeline(
                         pipeline=args[0],
                         collection_name=self.name,
-                        database_name=self.database.name
+                        database_name=self.database.name,
                     ):
                         self._has_changed()
 
                 elif op == 'bulk':
                     any_count = (
-                        ret.modified_count + ret.deleted_count
-                        + ret.inserted_count + ret.upserted_count
+                        ret.modified_count
+                        + ret.deleted_count
+                        + ret.inserted_count
+                        + ret.upserted_count
                     )
                     if any_count > 0:
                         self._has_changed()
@@ -409,12 +429,12 @@ class VersionedCollection(Collection):
         return decorator
 
     def _load_lock_collection(self) -> None:
-        """ Loads the collection holding the locking information. """
+        """Load the collection holding the locking information."""
         self._lock_collection = LockCollection(self.database)
         self._lock_collection.init_lock(self.name)
 
     def _load_tracking_collections(self) -> None:
-        """ Loads the associated tracking collection.
+        """Load the associated tracking collection.
 
         The collection are just loaded, but not actually built on the
         database, in the case this collection is not initialised for versioning
@@ -446,13 +466,13 @@ class VersionedCollection(Collection):
         ]
         self._temporary_tracking_collections = [
             self._conflicts_collection,
-            self._stash_container
+            self._stash_container,
         ]
 
         self._should_reload_tracking_cache = False
 
-    def _synchronize(func):
-        """ Locks this collection for versioning operations.
+    def _synchronize(func):  # noqa: B902
+        """Lock this collection for versioning operations.
 
         .. warning::
             This does not implement a collection lock at the database level.
@@ -488,7 +508,7 @@ class VersionedCollection(Collection):
             self._locked = False
 
     def init(self, message: Optional[str] = None) -> None:
-        """ Initialises this collection for tracking.
+        """Initialise this collection for tracking.
 
          Creates a snapshot of the current state of the collection and
          initialises the collection used for tracking this collection.
@@ -504,8 +524,8 @@ class VersionedCollection(Collection):
             collection = VersionedCollection(db, 'my_collection')
             collection.init('Initial version.')
 
-        :raises `versioned_collection.errors.CollectionAlreadyInitialised`:
-            If this collection has already been initialised.
+        :raises CollectionAlreadyInitialised: If this collection has already
+            been initialised.
         :param message: A short description of the initial state of the
             collection.
         """
@@ -527,9 +547,10 @@ class VersionedCollection(Collection):
 
         # Start listening to this collection
         self._start_listener()
+        self._locked = False
 
     def _start_listener(self) -> None:
-        """ Starts the listener for this collection.
+        """Start the listener for this collection.
 
         The listener will monitor the  changes to this collection and record
         them in the attached :class:`ModifiedCollection` collection.
@@ -540,11 +561,11 @@ class VersionedCollection(Collection):
             collection_name=self.name,
             host=host,
             port=port,
-            credentials=self.__credentials
+            credentials=self.__credentials,
         )
 
     def drop(self, *args, **kwargs) -> None:
-        """ Drops this versioned collection.
+        """Drop this versioned collection.
 
         In case this collection is being tracked, it also removes all the
         tracking information.
@@ -567,7 +588,7 @@ class VersionedCollection(Collection):
         super().drop(*args, **kwargs)
 
     def rename(self, new_name: str, *args, **kwargs) -> VersionedCollection:
-        """ Renames this collection and the tracking collections.
+        """Rename this collection and the tracking collections.
 
         The rename operation returns a new collection.
 
@@ -600,7 +621,7 @@ class VersionedCollection(Collection):
 
     @_synchronize
     def create_branch(self, branch_name: str) -> Tuple[int, str]:
-        """ Creates a branch with the given name and checks out to it.
+        """Create a branch with the given name and checks out to it.
 
         When creating a new branch changes are allowed to exist since the
         last registered version. This allows checking out a previous version
@@ -626,9 +647,10 @@ class VersionedCollection(Collection):
             >>> collection.is_detached()
             False
 
-        :raises `ValueError`: If `branch_name` starts with ``__``.
-        :raises `ValueError`: If a branch with name `branch_name` already
-            exists.
+        :raises ValueError:
+            - If `branch_name` starts with ``__``;
+            - If a branch with name `branch_name` already exists.
+
         :param branch_name: The name of the new branch. Can be any string,
             but it cannot start with double underscore (``__``).
         :return: The version id and branch name of the version the new branch
@@ -653,7 +675,7 @@ class VersionedCollection(Collection):
         self._branches_collection.create_branch(
             branch=branch_name,
             pointing_to_collection_version=curr_version,
-            pointing_to_branch=curr_branch
+            pointing_to_branch=curr_branch,
         )
         prev_version = curr_version
         prev_branch = curr_branch
@@ -665,14 +687,14 @@ class VersionedCollection(Collection):
             current_version=self._current_version,
             current_branch=self._current_branch,
             detached=False,
-            changed=self.has_changes()
+            changed=self.has_changes(),
         )
 
         return prev_version, prev_branch
 
     @_synchronize
     def register(self, message: str, branch_name: Optional[str] = None) -> bool:
-        """ Registers a new version of this collection.
+        """Register a new version of this collection.
 
         When the head is detached, a new branch with name `branch_name` is
         created pointing to the currently checked out version. This is
@@ -699,7 +721,7 @@ class VersionedCollection(Collection):
             (0, 'new')
 
 
-        :raises `ValueError`: If no branch name parameter is provided
+        :raises ValueError: If no branch name parameter is provided
             when the head is detached or if a branch with name `branch_name`
             already exists.
         :param message: The message associated with the new version of the
@@ -708,7 +730,6 @@ class VersionedCollection(Collection):
             new version. This is ignored if the head is not detached.
         :return: Whether the collection was successfully registered.
         """
-
         # Cannot register a new version if no changes were made.
         if not self.has_changes():
             return False
@@ -741,8 +762,9 @@ class VersionedCollection(Collection):
         )
         logs = [(log.version, log.branch) for log in logs]
 
-        modified_tracker_docs = \
+        modified_tracker_docs = (
             self._modified_collection.find_modified_documents_ids()
+        )
 
         if len(modified_tracker_docs) == 0:
             self._clear_changes()
@@ -759,7 +781,7 @@ class VersionedCollection(Collection):
             timestamp=now,
             database_name=self.database.name,
             address=self.database.client.address,
-            credentials=self.__credentials
+            credentials=self.__credentials,
         )
 
         has_registered_deltas = False
@@ -776,8 +798,9 @@ class VersionedCollection(Collection):
             has_registered_deltas = has_registered_deltas or any(statuses)
 
             # Make sure that all the changes are grabbed
-            modified_tracker_docs = \
+            modified_tracker_docs = (
                 self._modified_collection.find_modified_documents_ids()
+            )
 
         if not has_registered_deltas:
             self._clear_changes()
@@ -791,7 +814,7 @@ class VersionedCollection(Collection):
             current_version=self._current_version,
             current_branch=self._current_branch,
             detached=False,
-            changed=False
+            changed=False,
         )
 
         self._clear_changes()
@@ -800,7 +823,7 @@ class VersionedCollection(Collection):
         self._branches_collection.update_branch(
             branch=self._current_branch,
             pointing_to_collection_version=self._current_version,
-            pointing_to_branch=self._current_branch
+            pointing_to_branch=self._current_branch,
         )
 
         # Create a log entry
@@ -809,7 +832,7 @@ class VersionedCollection(Collection):
             previous_branch=previous_branch,
             current_branch=self._current_branch,
             message=message,
-            timestamp=now
+            timestamp=now,
         )
 
         # Create the snapshot
@@ -828,9 +851,9 @@ class VersionedCollection(Collection):
         timestamp: datetime.datetime,
         database_name: str,
         credentials: Tuple[Optional[str], Optional[str]],
-        address: Tuple[str, str]
+        address: Tuple[str, str],
     ) -> bool:
-        """ Helper used to register new changes.
+        """Register the changes for a (possible) subset of documents.
 
         This method is called by a worker process that registers the changes
         made to this collection.
@@ -851,12 +874,11 @@ class VersionedCollection(Collection):
         :return: ``True`` if at least one delta has been registered,
             ``False`` otherwise.
         """
-
         client = MongoClient(
             host=address[0],
             port=int(address[1]),
             username=credentials[0],
-            password=credentials[1]
+            password=credentials[1],
         )
         database = client[database_name]
 
@@ -886,7 +908,7 @@ class VersionedCollection(Collection):
                 collection_version=version,
                 branch=branch,
                 timestamp=timestamp,
-                branch_history=logs
+                branch_history=logs,
             )
             tracker_ids.extend(tracker_doc['tracker_ids'])
             has_registered_deltas = has_registered_deltas or res is not None
@@ -896,11 +918,12 @@ class VersionedCollection(Collection):
         return has_registered_deltas
 
     @_synchronize
-    def checkout(self,
-                 version: Optional[int] = None,
-                 branch: Optional[str] = None
-                 ) -> bool:
-        """ Checks out the given version of this collection.
+    def checkout(
+        self,
+        version: Optional[int] = None,
+        branch: Optional[str] = None,
+    ) -> bool:
+        """Update the collection to match the state of the given version.
 
         Collection versions have to exist (be registered) before checking
         them out.
@@ -932,20 +955,17 @@ class VersionedCollection(Collection):
 
             col.checkout(branch='main')  # now at version 1 on 'main'
 
-        :raises `~versioned_collection.errors.InvalidCollectionVersion`:
-            If given version does not match any recorded versions.
-
-        :raises `~versioned_collection.errors.InvalidOperation`:
-            If called is called when the collection has unregistered changes.
-
-        :raises `ValueError`: If called without providing at least one argument.
+        :raises InvalidCollectionVersion: If given version does not match
+            any recorded versions.
+        :raises InvalidOperation: If called is called when the collection
+            has unregistered changes.
+        :raises ValueError: If called without providing at least one argument.
 
         :param version: The version of the collection to be checked out.
         :param branch: The branch of the collection to check out to.
         :return: ``True`` if the operation succeeds, ``False`` if the checkout
             is not performed, but no errors were raised.
         """
-
         if version is None and branch is None:
             raise ValueError(
                 "Invalid arguments to checkout!"
@@ -969,8 +989,11 @@ class VersionedCollection(Collection):
         dest_branch_data = curr_branch_data
         if branch != self._current_branch:
             dest_branch_data = self._branches_collection.get_branch(branch)
-        version = dest_branch_data.points_to_collection_version \
-            if version is None else version
+        version = (
+            dest_branch_data.points_to_collection_version
+            if version is None
+            else version
+        )
 
         if self._current_version == -1:
             if version == 0 and branch == self._current_branch:
@@ -980,14 +1003,15 @@ class VersionedCollection(Collection):
             # registered on it. Move the HEAD to the base branch and continue
             # the checkout from there.
             self._current_branch = curr_branch_data.points_to_branch
-            self._current_version = \
+            self._current_version = (
                 curr_branch_data.points_to_collection_version
+            )
 
             self._meta_collection.set_metadata(
                 current_version=self._current_version,
                 current_branch=self._current_branch,
                 detached=False,
-                changed=False
+                changed=False,
             )
 
         # Save the proper target branch and version number. If the
@@ -1007,7 +1031,7 @@ class VersionedCollection(Collection):
                     current_version=destination_version,
                     current_branch=destination_branch,
                     detached=False,
-                    changed=False
+                    changed=False,
                 )
                 self._current_version = destination_version
                 self._current_branch = destination_branch
@@ -1033,7 +1057,7 @@ class VersionedCollection(Collection):
                 self.replace_one(
                     filter={'_id': doc_id},
                     replacement=doc,
-                    upsert=True
+                    upsert=True,
                 )
 
         documents = list(documents.items())
@@ -1050,16 +1074,17 @@ class VersionedCollection(Collection):
         # If the current version is the latest version on this branch,
         # then the head is attached, otherwise it is detached
         branch_data = dest_branch_data
-        attached = \
-            branch_data.points_to_branch == destination_branch and \
-            branch_data.points_to_collection_version == destination_version
+        attached = (
+            branch_data.points_to_branch == destination_branch
+            and branch_data.points_to_collection_version == destination_version
+        )
 
         # Update the metadata
         self._meta_collection.set_metadata(
             current_version=self._current_version,
             current_branch=self._current_branch,
             detached=not attached,
-            changed=False
+            changed=False,
         )
 
         # This could be optimised, but I think it is better to do it like this
@@ -1078,7 +1103,13 @@ class VersionedCollection(Collection):
         target_version: Tuple[int, str],
         current_source: Optional[Collection] = None,
     ) -> Tuple[Dict[Any, Dict[str, Any]], Dict[Any, Dict[str, Any]]]:
-        """ Gets the modified documents since the target version was registered.
+        """Get the modified documents since the target version was registered.
+
+        :raises InvalidCollectionVersion: If no entry for the
+            `target_version` exists in the log.
+        :raises InvalidCollectionState: If no deltas have been found
+            between the current and the target version, even though both are
+            valid registered versions.
 
         :param current_version: The current version.
         :param target_version: The target version.
@@ -1094,8 +1125,7 @@ class VersionedCollection(Collection):
             return dict(), dict()
 
         path = self._log_collection.get_path_between_versions(
-            current=current_version,
-            target=target_version
+            current=current_version, target=target_version
         )
 
         # Compute the deltas
@@ -1119,13 +1149,13 @@ class VersionedCollection(Collection):
         documents, current_documents = self._deltas_collection.apply_deltas(
             per_document_deltas=per_document_deltas,
             documents=current_documents,
-            return_current_documents=True
+            return_current_documents=True,
         )
         return documents, current_documents
 
     @_synchronize
     def stash(self, overwrite: bool = False) -> bool:
-        """ Stashes the changes made to this collection.
+        """Stash the changes made to this collection.
 
         Only a single set of changes can be stashed at any time. Calling this
         method multiple times without restoring the stashed data first will
@@ -1169,7 +1199,7 @@ class VersionedCollection(Collection):
             {'_id': ObjectId('54f112defba522406c9cc208'), 'field': 'new value'}
 
 
-        :raises `InvalidOperation`: When ``overwrite=False`` and there exists
+        :raises InvalidOperation: When ``overwrite=False`` and there exists
             another stash.
         :param overwrite: Whether to overwrite the existing stash space.
         :return: ``True`` if the changes were stashed, ``False`` if the
@@ -1191,7 +1221,7 @@ class VersionedCollection(Collection):
 
     @_synchronize
     def stash_apply(self) -> bool:
-        """ Applies the stashed changes over the currently checked out version.
+        """Apply the stashed changes over the currently checked out version.
 
         .. warning::
             Applying the stashed changes will overwrite the existing
@@ -1213,7 +1243,7 @@ class VersionedCollection(Collection):
             >>> collection.has_changes()
             True
 
-        :raises `InvalidOperation`: If the collection has changes.
+        :raises InvalidOperation: If the collection has changes.
         :return: ``True`` if the stash is successfully applied, ``False`` if
             the collection is not tracked or there is no stash to apply.
         """
@@ -1234,7 +1264,7 @@ class VersionedCollection(Collection):
 
     @_synchronize
     def stash_discard(self) -> bool:
-        """ Removes the stashed data from the stash area.
+        """Remove the stashed data from the stash area.
 
         After this method is called the stash will be empty and cannot be
         recovered.
@@ -1266,7 +1296,7 @@ class VersionedCollection(Collection):
 
     @_synchronize
     def discard_changes(self) -> bool:
-        """ Discards the changes made to the collection.
+        """Discard the changes made to the collection.
 
         After discarding the changes, the collection will return to the state
         of the previous registered version.
@@ -1274,14 +1304,17 @@ class VersionedCollection(Collection):
         If the changes made to the collection should be temporarily and safely
         stored, consider calling :meth:`stash()`.
 
+        :raises InvalidCollectionState: If there exists documents modified
+            via invalid operations.
         :return: Whether the operation was successfully executed or not.
         """
         if not self._tracked:
             return False
 
         self._listener.stop()
-        docs = self._modified_collection \
-            .get_modified_document_ids_by_operation()
+        docs = (
+            self._modified_collection.get_modified_document_ids_by_operation()
+        )
 
         restored = set()
 
@@ -1390,12 +1423,12 @@ class VersionedCollection(Collection):
         deep: Literal[True, False] = False,
         direction: Literal['to', 'from', 'bidirectional'] = 'from',
     ) -> Union[
-            Optional[Dict[Any, str]],
-            Optional[Dict[Any, DeepDiff]],
-            Optional[Dict[Literal['to', 'from'], Dict[Any, str]]],
-            Optional[Dict[Literal['to', 'from'], Dict[Any, DeepDiff]]],
+        Optional[Dict[Any, str]],
+        Optional[Dict[Any, DeepDiff]],
+        Optional[Dict[Literal['to', 'from'], Dict[Any, str]]],
+        Optional[Dict[Literal['to', 'from'], Dict[Any, DeepDiff]]],
     ]:
-        """ Returns the diffs between the current and the given version.
+        """Return the diffs between the current and the given version.
 
         If no version id or branch are given, this method computes the diffs
         between the current working version and the last version registered.
@@ -1414,7 +1447,6 @@ class VersionedCollection(Collection):
             a document.
 
         Examples:
-
         .. code-block:: python
 
             >>> collection: VersionedCollection  # assume this exists in scope
@@ -1431,9 +1463,7 @@ class VersionedCollection(Collection):
             >>> collection.diff(0, 'main', direction='to')
             <diff from the current version to version 0 on branch main>
 
-
-        :raises `~versioned_collection.errors.InvalidCollectionVersion`: If
-            the given version does not exist.
+        :raises InvalidCollectionVersion: If the given version does not exist.
 
         :param version: The version to compare the current version with.
         :param branch: The branch on which the version to compare the current
@@ -1553,14 +1583,13 @@ class VersionedCollection(Collection):
     def get_log(
         self, branch: Optional[str] = None
     ) -> List[LogsCollection.SCHEMA]:
-        """ Returns the log of this collection for the given branch.
+        """Return the log of this collection for the given branch.
 
         The returned history is in descending order (the latest entry first).
         The first entry will correspond to the previous registered version on
         the given branch, with respect to the current version.
 
-        :raises `~versioned_collection.error.BranchNotFound`: If no branch
-            with the given name exists.
+        :raises BranchNotFound: If no branch with the given name exists.
 
         :param branch: The name of the branch for which to get the history.
             If it is not provided, this defaults to the current branch
@@ -1575,18 +1604,18 @@ class VersionedCollection(Collection):
         )
 
     def _set_changed(self, changed: bool = True) -> None:
-        """ Reflects information about the collection's status to metadata."""
+        """Reflect information about the collection's status to metadata."""
         m = self._meta_collection.metadata
         if m.changed == changed:
             return
         self._meta_collection.set_metadata(changed=changed)
 
     def _has_changed(self) -> None:
-        """ Sets this collection's status as changed. """
+        """Set this collection's status as changed."""
         self._set_changed(True)
 
     def _clear_changes(self) -> None:
-        """ Sets this collection's status as unchanged.
+        """Set this collection's status as unchanged.
 
         Use this when a new version of the collection is registered, so there
         are no non-tracked changes, or when changes get discarded.
@@ -1594,53 +1623,63 @@ class VersionedCollection(Collection):
         self._set_changed(False)
 
     def has_changes(self) -> bool:
-        """ Returns whether this collection has unregistered changes. """
-        return self._meta_collection.metadata.changed \
-            if self._tracked else False
+        """Return whether this collection has unregistered changes."""
+        return (
+            self._meta_collection.metadata.changed if self._tracked else False
+        )
 
     def is_tracked(self) -> bool:
-        """ Returns whether this collection is initialised for versioning. """
+        """Return whether this collection is initialised for versioning."""
         return self._tracked
 
     def has_conflicts(self) -> bool:
-        """ Returns whether this collection has unresolved conflicts. """
-        return self._meta_collection.metadata.has_conflicts \
-            if self._tracked else False
+        """Return whether this collection has unresolved conflicts."""
+        return (
+            self._meta_collection.metadata.has_conflicts
+            if self._tracked
+            else False
+        )
 
     def has_stash(self) -> bool:
-        """ Returns whether this collection has stashed changes. """
-        return self._meta_collection.metadata.has_stash \
-            if self._tracked else False
+        """Return whether this collection has stashed changes."""
+        return (
+            self._meta_collection.metadata.has_stash if self._tracked else False
+        )
 
     def is_detached(self) -> bool:
-        """ Returns whether this collection is in the detached head mode. """
-        return self._meta_collection.metadata.detached \
-            if self._tracked else False
+        """Return whether this collection is in the detached head mode."""
+        return (
+            self._meta_collection.metadata.detached if self._tracked else False
+        )
 
     def status(self) -> Dict[str, Union[str, bool, int]]:
-        """ Returns the status of this collection. """
+        """Return the status of this collection."""
         if self._tracked:
             return self._meta_collection.metadata.__dict__
         else:
             return {'tracked': False}
 
     def branches(self) -> Set[str]:
-        """ Returns the names of the existing branches.
+        """Return the names of the existing branches.
 
         :return: A set containing the name of all branches registered on
             the collection. If the collection is not initialised for
             tracking, an empty set is returned.
         """
-        return self._branches_collection.get_branch_names() if self._tracked \
+        return (
+            self._branches_collection.get_branch_names()
+            if self._tracked
             else []
+        )
 
     @_synchronize
-    def push(self,
-             remote_collection: VersionedCollection,
-             branch: Optional[str] = None,
-             do_checkout: bool = True
-             ) -> bool:
-        """ Pushes a branch of this collection to a remote collection.
+    def push(
+        self,
+        remote_collection: VersionedCollection,
+        branch: Optional[str] = None,
+        do_checkout: bool = True,
+    ) -> bool:
+        """Push a branch of this collection to a remote collection.
 
         If the remote collection is checked out on branch `branch`,
         by default, upon pushing, the remote's collection state is updated,
@@ -1664,19 +1703,21 @@ class VersionedCollection(Collection):
             so none of the collections can perform other versioning operations
             until the synchronisation is finished.
 
-        :raises `~versioned_collection.errors.InvalidOperation`: If trying to
-            push from a collection to itself, if trying to push when the
-            collection's head is detached and no `branch` parameter is
-            provided, or when the remote branch has changes that are not
-            present on the local branch.
+        :raises InvalidOperation:
+            - If trying to push from a collection to itself;
+            - If trying to push when the collection's head is detached and no
+              ``branch`` parameter is provided;
+            - If the remote branch has changes that are not present on the
+              local branch;
+            - If the remote collection is not initialised;
+             - If the local collection has more than one version registered,
+               the local collection has data into the stash area and the
+               local collection has unregistered changes.
 
-        :raises `~versioned_collection.errors.InvalidOperation`: If the remote
-            collection is not initialised, the local collection has more
-            than one version registered, the local collection has data into
-            the stash area and the local collection has unregistered changes.
-
-        :raises `ValueError`: When the remote collection has a  different name
+        :raises ValueError: When the remote collection has a  different name
             and type compared to this collection.
+
+        :raises Exception: _ignore.
 
         :param remote_collection: The versioned collection on which the branch
             will be pushed. This can be a collection from the same database
@@ -1702,25 +1743,12 @@ class VersionedCollection(Collection):
         return ret
 
     @staticmethod
-    def _push(src: VersionedCollection,
-              remote_collection: VersionedCollection,
-              branch: Optional[str],
-              do_checkout: bool = True
-              ) -> bool:
-        """ Pushes a branch from `src` to `remote_collection`
-
-        This is a helper method that performs the ``push`` operation between
-        two versions collections. See :meth:`push()` for a broader description.
-
-        :param src: The source versioned collection.
-        :param remote_collection: The destination versioned collection.
-        :param branch: The branch to push
-        :param do_checkout: Whether to check out the head of the branch
-            when `branch` is the current branch.
-        :return: ``False`` if this collection is not tracked, otherwise ``True``
-            if the operation completed successfully, or the remote branch is
-            up-to-date.
-        """
+    def _push(
+        src: VersionedCollection,
+        remote_collection: VersionedCollection,
+        branch: Optional[str],
+        do_checkout: bool = True,
+    ) -> bool:
         if not src.is_tracked():
             return False
         if remote_collection is src:
@@ -1828,8 +1856,10 @@ class VersionedCollection(Collection):
             try:
                 # The local branch is not empty; get the information from the
                 # log tree.
-                parent_version, parent_branch = \
-                    src._log_collection.get_parent_version(version=(0, branch))
+                (
+                    parent_version,
+                    parent_branch,
+                ) = src._log_collection.get_parent_version(version=(0, branch))
             except (BranchNotFound, InvalidCollectionVersion):
                 # The local branch is empty, i.e., no versions are registered
                 # on this branch, so it does not appear in the log tree. Get
@@ -1839,10 +1869,8 @@ class VersionedCollection(Collection):
                 parent_branch = local_branch_data.points_to_branch
 
             # Check if the branching point exists on the remote collection
-            if (
-                not remote_collection._log_collection.contains_version(
-                    parent_version, parent_branch
-                )
+            if not remote_collection._log_collection.contains_version(
+                parent_version, parent_branch
             ):
                 raise InvalidOperation(
                     f"Cannot push branch {branch} while its parent branch "
@@ -1853,7 +1881,7 @@ class VersionedCollection(Collection):
             remote_collection._branches_collection.create_branch(
                 branch=branch,
                 pointing_to_collection_version=parent_version,
-                pointing_to_branch=parent_branch
+                pointing_to_branch=parent_branch,
             )
 
         if local_branch_data is None:
@@ -1898,7 +1926,7 @@ class VersionedCollection(Collection):
             local_log = src.get_log(branch)
 
         # Add the log entries to the remote collection
-        logs = local_log[:len(path) - 1]
+        logs = local_log[: len(path) - 1]
         prev_version = list(path.keys()).pop(0)
         for log in reversed(logs):
             prev_version = remote_collection._log_collection.add_log_entry(
@@ -1907,7 +1935,7 @@ class VersionedCollection(Collection):
                 current_branch=log.branch,
                 message=log.message,
                 timestamp=log.timestamp,
-                with_id=log.id
+                with_id=log.id,
             )
 
         # Get deltas between the latest version on remote and latest version
@@ -1924,7 +1952,7 @@ class VersionedCollection(Collection):
         remote_collection._branches_collection.update_branch(
             branch=branch,
             pointing_to_collection_version=local_version,
-            pointing_to_branch=branch
+            pointing_to_branch=branch,
         )
 
         if remote_collection.branch == branch and do_checkout:
@@ -1933,11 +1961,12 @@ class VersionedCollection(Collection):
         return True
 
     @_synchronize
-    def pull(self,
-             remote_collection: VersionedCollection,
-             branch: Optional[str] = None
-             ) -> bool:
-        """ Pulls a branch from a remote collection to this collection.
+    def pull(
+        self,
+        remote_collection: VersionedCollection,
+        branch: Optional[str] = None,
+    ) -> bool:
+        """Pull a branch from a remote collection to this collection.
 
         Pulling allows downloading a single branch at a time and does not
         pull the entire version tree of the remote collection. If this is
@@ -1982,30 +2011,28 @@ class VersionedCollection(Collection):
             so none of the collections can perform other versioning operations
             until the synchronisation is finished.
 
-        :raises `~versioned_collection.errors.InvalidOperation`: If trying to
-            pull from the same collection into itself.
-        :raises `ValueError`: If the name of the `remote_collection` is
+        :raises InvalidOperation:
+            - If trying to pull from the same collection into itself;
+            - If the collection is in detached mode and `branch` is not given.
+            - If the collection is checked out to the head of local
+              `branch`, but the collection has changes;
+            - If `branch` is not a branch of the `remote_collection`;
+            - If this collection and the `remote_collection` have diverging
+              initial versions, i.e., they were initialised independently and
+              not properly synchronised using :meth:`pull` or :meth:`push`;
+            - If the local and remote versions of `branch` have diverged,
+              the local collection has data in the stash area and the local
+              collection has unregistered changes. Automatic stashing is
+              possible, but since there is already data in the stashing
+              area, that data will be lost, so an error is raised to
+              manually correct it.
+        :raises ValueError: If the name of the `remote_collection` is
             different from the name of this collection.
-        :raises `~versioned_collection.errors.InvalidOperation`: If the
-            collection is in detached mode and `branch` is not given.
-        :raises `~versioned_collection.errors.InvalidOperation`: If the
-            collection is checked out to the head of local `branch`, but the
-            collection has changes.
-        :raises `~versioned_collection.errors.InvalidOperation`: If `branch`
-            is not a branch of the `remote_collection`.
-        :raises `~versioned_collection.errors.InvalidCollectionState`: If this
-            collection and the `remote_collection` have diverging initial
-            versions, i.e., they were initialised independently and not
-            properly synchronised using :meth:`pull` or :meth:`push`.
-        :raises `~versioned_collection.errors.InvalidOperation`: If the local
-            and remote versions of `branch` have diverged, the local
-            collection has data in the stash area and the local collection
-            has unregistered changes. Automatic stashing is possible,
-            but since there is already data in the stashing area, that data
-            will be lost, so an error is raised to manually correct it.
-        :raises `~versioned_collection.errors.AutoMergeFailedError`: If the
+        :raises AutoMergeFailedError: If the
             auto-merging the local and remote versions of `branch` resulted
             in merge conflicts.
+
+        :raises Exception: _ignored
 
         :param remote_collection: The remote :class:`VersionedCollection`
             from which to download a branch.
@@ -2024,10 +2051,11 @@ class VersionedCollection(Collection):
             remote_collection._unlock()
         return ret
 
-    def _pull(self,
-              remote_collection: VersionedCollection,
-              branch: Optional[str] = None
-              ) -> bool:
+    def _pull(
+        self,
+        remote_collection: VersionedCollection,
+        branch: Optional[str] = None,
+    ) -> bool:
         if not remote_collection.is_tracked():
             return False
 
@@ -2130,13 +2158,9 @@ class VersionedCollection(Collection):
 
         # Pull from remote
         do_checkout = False
-        if (
-            diverging_version is None
-            and
-            (
-                branch == self.branch and not self.is_detached()
-                or not self._tracked
-            )
+        if diverging_version is None and (
+            (branch == self.branch and not self.is_detached())
+            or not self._tracked
         ):
             do_checkout = True
 
@@ -2172,12 +2196,13 @@ class VersionedCollection(Collection):
 
         return True
 
-    def _merge(self,
-               destination: Tuple[int, str],
-               source: Tuple[int, str],
-               separation_point: Tuple[int, str]
-               ) -> None:
-        """ Merges the `source` branch into the `destination` branch.
+    def _merge(
+        self,
+        destination: Tuple[int, str],
+        source: Tuple[int, str],
+        separation_point: Tuple[int, str],
+    ) -> None:
+        """Merge the `source` branch into the `destination` branch.
 
         .. warning::
             Merging a branch that has child branches will result in the lost
@@ -2191,13 +2216,14 @@ class VersionedCollection(Collection):
             The merge operation preserves the tree structure of the version
             tree, and does not create versions that have multiple ancestors.
 
+        :raises AutoMergeFailedError: If the merge processed produced conflicts.
+
         :param destination: The last version on the branch into which the merge
             happens.
         :param source: The last version of the branch to be merged.
         :param separation_point: The version of the common ancestor of the two
             branches.
         """
-
         self.checkout(*separation_point)
         dest_docs, original = self._get_documents_modified_between_versions(
             current_version=separation_point, target_version=destination
@@ -2207,8 +2233,11 @@ class VersionedCollection(Collection):
         )[0]
         self.checkout(*destination)
 
-        all_ids = set(original.keys()) | set(dest_docs.keys()) | \
-                  set(source_docs.keys())
+        all_ids = (
+            set(original.keys())
+            | set(dest_docs.keys())
+            | set(source_docs.keys())
+        )
 
         merged, updated, conflicting = [], [], []
 
@@ -2253,7 +2282,7 @@ class VersionedCollection(Collection):
                         'merged': doc,
                         'source': s,
                         'destination_branch': destination[1],
-                        'source_branch': source[1]
+                        'source_branch': source[1],
                     })
 
         if len(merged):
@@ -2284,9 +2313,9 @@ class VersionedCollection(Collection):
         destination: Dict[str, Any],
         source: Dict[str, Any],
         diff_destination: DeepDiff,
-        diff_source: DeepDiff
+        diff_source: DeepDiff,
     ) -> Tuple[Dict[str, Any], List[str]]:
-        """ Merges the `source` and `destination` dictionaries.
+        """Merge the `source` and `destination` dictionaries.
 
         :param destination: The dictionary to update.
         :param source: The dictionary that contains the updates.
@@ -2297,10 +2326,16 @@ class VersionedCollection(Collection):
         :return: A dictionary containing the auto-merged fields and a list of
             conflicting paths.
         """
-        d_paths = {diff.path(output_format='list')[0]
-                   for v in diff_destination.values() for diff in v}
-        s_paths = {diff.path(output_format='list')[0]
-                   for v in diff_source.values() for diff in v}
+        d_paths = {
+            diff.path(output_format='list')[0]
+            for v in diff_destination.values()
+            for diff in v
+        }
+        s_paths = {
+            diff.path(output_format='list')[0]
+            for v in diff_source.values()
+            for diff in v
+        }
 
         auto_merged = deepcopy(destination)
         conflict_paths = []
@@ -2319,13 +2354,15 @@ class VersionedCollection(Collection):
         return auto_merged, conflict_paths
 
     def _rebranch(self, version: int, branch: str) -> str:
-        """ Moves the subtree of the version tree rooted at the given version
-        to another branch.
+        """Move the subtree rooted at the given version to another branch.
 
         Re-branching involves updating the log tree references, the branch
         references inside the deltas contained in the subtree that needs to
         be re-branched, updating the branch pointer and updating any empty
         branches that point at `branch`.
+
+        :raises InvalidOperation: If the given version is the root of the
+            version tree.
 
         :param version: The version from which to re-branch.
         :param branch: The branch name of the branch to modify.
@@ -2341,9 +2378,9 @@ class VersionedCollection(Collection):
         num_versions_to_rebranch = last_version_on_branch - version + 1
 
         new_name = f"__rebranched_{branch}"
-        next_branch_id = len(list(filter(
-            lambda b: b.startswith(new_name), self.branches()
-        )))
+        next_branch_id = len(
+            list(filter(lambda b: b.startswith(new_name), self.branches()))
+        )
         new_name = f"{new_name}_{next_branch_id}"
 
         # Update the log
@@ -2354,7 +2391,7 @@ class VersionedCollection(Collection):
         self._deltas_collection.rebranch(
             start_version=(version, branch),
             new_branch=new_name,
-            num_versions=num_versions_to_rebranch
+            num_versions=num_versions_to_rebranch,
         )
         # Change the branch pointer
         self._branches_collection.update_branch(
@@ -2366,7 +2403,7 @@ class VersionedCollection(Collection):
         self._branches_collection.create_branch(
             branch=new_name,
             pointing_to_collection_version=num_versions_to_rebranch - 1,
-            pointing_to_branch=new_name
+            pointing_to_branch=new_name,
         )
         # Update any other branches originally pointing to `branch`
         for br in self._branches_collection.get_empty_child_branches(branch):
@@ -2375,7 +2412,7 @@ class VersionedCollection(Collection):
                 pointing_to_collection_version=(
                     br.points_to_collection_version - version
                 ),
-                pointing_to_branch=new_name
+                pointing_to_branch=new_name,
             )
         # Update the HEAD pointer
         if self.branch == branch:
@@ -2390,7 +2427,7 @@ class VersionedCollection(Collection):
 
     @_synchronize
     def resolve_conflicts(self, discard_local_changes: bool = False) -> bool:
-        """ Call this method to interactively resolve the merge conflicts.
+        """Interactively resolve the merge conflicts.
 
         A GUI conflict resolver will pop up for each conflicting document. You
         will view three columns: the one in the left of the screen represents
@@ -2418,7 +2455,6 @@ class VersionedCollection(Collection):
         :return: ``True`` if the operation ended successfully, ``False``
             otherwise, or if there were no conflicts to resolve.
         """
-
         if not self.has_conflicts():
             return False
 
@@ -2434,7 +2470,7 @@ class VersionedCollection(Collection):
             self.discard_changes()
             return True
 
-        _dir = '/tmp/vc/conflicts_resolution/'
+        _dir = '/tmp/vc/conflicts_resolution/'  # noqa: S108
         if os.path.exists(_dir):
             rmtree(_dir)
         os.makedirs(_dir)
@@ -2451,17 +2487,25 @@ class VersionedCollection(Collection):
                 with open(file_name, 'w+') as f:
                     f.write(stringify_document(conflict[doc_type]))
 
-            subprocess.run([
-                'meld', files['destination'], files['merged'], files['source'],
-                '--auto-merge', '-L REMOTE', '-L MERGED', '-L LOCAL'
-            ], check=True)
+            subprocess.run(  # noqa: S603
+                [
+                    '/usr/bin/meld',
+                    files['destination'],
+                    files['merged'],
+                    files['source'],
+                    '--auto-merge',
+                    '-L REMOTE',
+                    '-L MERGED',
+                    '-L LOCAL',
+                ],
+                check=True,
+            )
 
             with open(files['merged'], 'r') as f:
                 merged_doc = parse_json_document(f.read())
 
             self.find_one_and_replace(
-                filter={'_id': merged_doc['_id']},
-                replacement=merged_doc
+                filter={'_id': merged_doc['_id']}, replacement=merged_doc
             )
             print(f"[vc] Resolved conflict for document {merged_doc['_id']}")
             self._conflicts_collection.delete_one({'_id': conflict['_id']})
@@ -2473,11 +2517,9 @@ class VersionedCollection(Collection):
 
     @_synchronize
     def delete_version_subtree(
-        self,
-        version: int,
-        branch: Optional[str] = None
+        self, version: int, branch: Optional[str] = None
     ) -> bool:
-        """ Deletes a version and all versions registered after it.
+        """Delete a version and all versions registered after it.
 
         .. warning::
             This deletes the subtree of the version tree rooted in version
@@ -2494,8 +2536,7 @@ class VersionedCollection(Collection):
         as well. Also, in the same case, the state of the collection will be
         rolled back to the parent's version state of the given version.
 
-        :raises `~versioned_collection.errors.InvalidCollectionVersion`:
-            If the given version does not exist.
+        :raises InvalidCollectionVersion: If the given version does not exist.
 
         :param version: The version id of the version that will be removed.
         :param branch: The branch on which the versions to be deleted are
@@ -2537,9 +2578,11 @@ class VersionedCollection(Collection):
             self._meta_collection.set_metadata(detached=True)
 
         branches_to_delete = [
-            b.name for b in self._branches_collection.get_empty_child_branches(
+            b.name
+            for b in self._branches_collection.get_empty_child_branches(
                 branch, version
-            )]
+            )
+        ]
 
         leaves = self._log_collection.get_branch_tips_versions(version_id)
         for _, leaf_branch in leaves:
@@ -2554,7 +2597,7 @@ class VersionedCollection(Collection):
             self._branches_collection.update_branch(
                 branch=branch,
                 pointing_to_collection_version=version - 1,
-                pointing_to_branch=branch
+                pointing_to_branch=branch,
             )
 
         # Delete the branch pointers
@@ -2562,10 +2605,7 @@ class VersionedCollection(Collection):
 
         self._log_collection.delete_subtree(version_id)
 
-        self._deltas_collection.delete_subtrees(
-            root=version_id,
-            leaves=leaves
-        )
+        self._deltas_collection.delete_subtrees(root=version_id, leaves=leaves)
 
         if self.is_detached():
             branch_data = self._branches_collection.get_branch(
@@ -2637,6 +2677,5 @@ class VersionedCollection(Collection):
     def aggregate(self, pipeline, *args, **kwargs):
         return super().aggregate(pipeline, *args, **kwargs)
 
-    # hack
-    _check_for_changes = staticmethod(_check_for_changes)
     _synchronize = staticmethod(_synchronize)
+    _check_for_changes = staticmethod(_check_for_changes)

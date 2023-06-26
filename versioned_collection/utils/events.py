@@ -6,7 +6,7 @@ from typing import List, Optional
 
 
 def reduce_event_sequence(events: List[str]) -> Optional[str]:
-    """ Reduces a list of events to a single event.
+    """Reduce a list of events to a single event.
 
     .. warning::
         'Upserts' should be fed in as inserts, so 'update' events have to
@@ -64,6 +64,8 @@ def reduce_event_sequence(events: List[str]) -> Optional[str]:
 
     where 'any' can be either of insert, update, delete or no-op.
 
+    :raises ValueError: If `events` is an invalid sequence of events.
+
     :param events: The list of events to be reduced. This sequence
         should consist of pure events. The permitted events and their
         representation are inserts ('i'), (pure) updates ('u') and
@@ -73,6 +75,8 @@ def reduce_event_sequence(events: List[str]) -> Optional[str]:
     """
 
     class Event(Enum):
+        """Enumeration of possible events."""
+
         INSERT = 'i'
         UPDATE = 'u'
         DELETE = 'd'
@@ -125,7 +129,8 @@ def reduce_event_sequence(events: List[str]) -> Optional[str]:
     if events is None or len(events) == 0:
         raise ValueError(
             f"Invalid input events sequence. "
-            f"Expected a non-empty list, but got '{events}'.")
+            f"Expected a non-empty list, but got '{events}'."
+        )
     if len(events) == 1:
         # check if valid
         Event.get(events[0])

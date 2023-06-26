@@ -1,4 +1,4 @@
-""" Helper tracking collection used in versioning.
+"""Helper tracking collection used in versioning.
 
 This module defines various tracking collection used to version the target
 :class:`VersionedCollection` collection.
@@ -44,5 +44,5 @@ __all__ = [
     'ReplicaCollection',
     'StashCollection',
     'StashContainer',
-    'LockCollection'
+    'LockCollection',
 ]

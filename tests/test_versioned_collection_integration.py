@@ -8,22 +8,19 @@ from bson import ObjectId
 from pymongo import MongoClient
 
 from versioned_collection import VersionedCollection
-from versioned_collection.errors import CollectionAlreadyInitialised, \
-    InvalidOperation, InvalidCollectionVersion, BranchNotFound, \
-    InvalidCollectionState, AutoMergeFailedError
+from versioned_collection.errors import (
+    CollectionAlreadyInitialised,
+    InvalidOperation,
+    InvalidCollectionVersion,
+    BranchNotFound,
+    InvalidCollectionState,
+    AutoMergeFailedError,
+)
 from versioned_collection.utils.serialization import stringify_object_id
 
 
 class User(VersionedCollection):
-    SCHEMA = {
-        'name': str,
-        'emails': List[str]
-    }
-
-
-def debug():
-    import pdb
-    pdb.set_trace()
+    SCHEMA = {'name': str, 'emails': List[str]}
 
 
 SLEEP_TIME = 0.12
@@ -43,15 +40,9 @@ class _BaseTest(TestCase):
     def setUp(self) -> None:
         self.user_collection = User(self.database)
 
-        self.DOCUMENT = {
-            'name': 'Goethe',
-            'emails': ['oh_my@goethe.com']
-        }
+        self.DOCUMENT = {'name': 'Goethe', 'emails': ['oh_my@goethe.com']}
 
-        self.DOCUMENT2 = {
-            'name': 'Euler',
-            'emails': ['euler@mathsclub.ch']
-        }
+        self.DOCUMENT2 = {'name': 'Euler', 'emails': ['euler@mathsclub.ch']}
 
     def tearDown(self) -> None:
         self.user_collection.drop()
@@ -64,8 +55,7 @@ class TestVersionedCollectionBasics(_BaseTest):
         self.user_collection.init()
         self.assertFalse(self.user_collection.has_changes())
         self.user_collection.find_one_and_replace(
-            {'name': 'Goethe'},
-            self.DOCUMENT2
+            {'name': 'Goethe'}, self.DOCUMENT2
         )
         self.assertTrue(self.user_collection.has_changes())
 
@@ -74,7 +64,8 @@ class TestVersionedCollectionBasics(_BaseTest):
         self.user_collection.init()
         self.assertFalse(self.user_collection.has_changes())
         self.user_collection.find_one_and_update(
-            {}, {"$set": {'name': 'GOETHE'}})
+            {}, {"$set": {'name': 'GOETHE'}}
+        )
         self.assertTrue(self.user_collection.has_changes())
 
     def test_find_one_and_delete(self):
@@ -139,7 +130,7 @@ class TestVersionedCollectionBasics(_BaseTest):
         self.user_collection.bulk_write([
             pymongo.InsertOne(self.DOCUMENT),
             pymongo.DeleteOne(self.DOCUMENT),
-            pymongo.InsertOne(self.DOCUMENT2)
+            pymongo.InsertOne(self.DOCUMENT2),
         ])
         self.assertTrue(self.user_collection.has_changes())
 
@@ -160,9 +151,9 @@ class TestVersionedCollectionBasics(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init()
 
-        self.user_collection.aggregate([
-            {'$match': {}}, {'$out': self.user_collection.name}
-        ])
+        self.user_collection.aggregate(
+            [{'$match': {}}, {'$out': self.user_collection.name}]
+        )
         self.assertTrue(self.user_collection.has_changes())
 
     def test_aggregation_with_modifying_pipeline2(self):
@@ -171,10 +162,12 @@ class TestVersionedCollectionBasics(_BaseTest):
 
         self.user_collection.aggregate([
             {'$match': {}},
-            {'$out': {
-                'db': self._database_name,
-                'coll': self.user_collection.name
-            }}
+            {
+                '$out': {
+                    'db': self._database_name,
+                    'coll': self.user_collection.name,
+                }
+            },
         ])
         self.assertTrue(self.user_collection.has_changes())
 
@@ -255,7 +248,8 @@ class TestVersionedCollectionInit(_BaseTest):
     def test_init_creates_main_branch(self):
         self.user_collection.init()
         self.assertEqual(
-            self.user_collection._branches_collection.count_documents({}), 1)
+            self.user_collection._branches_collection.count_documents({}), 1
+        )
         data = self.user_collection._branches_collection.get_branch('main')
         self.assertIsNotNone(data)
 
@@ -276,8 +270,10 @@ class TestVersionedCollectionDrop(_BaseTest):
         self.assertEqual(len(self.database.list_collection_names()), 0)
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init()
-        self.assertEqual(len(self.database.list_collection_names()),
-                         len(self.user_collection._tracking_collections) + 2)
+        self.assertEqual(
+            len(self.database.list_collection_names()),
+            len(self.user_collection._tracking_collections) + 2,
+        )
         self.user_collection.drop()
         self.assertEqual(len(self.database.list_collection_names()), 0)
 
@@ -307,14 +303,16 @@ class TestVersionedCollectionRename(_BaseTest):
     def test_renaming_a_tracked_collection_renames_the_tracking_cols(self):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init()
-        old_coll_names = [coll.name for coll in
-                          self.user_collection._tracking_collections]
+        old_coll_names = [
+            coll.name for coll in self.user_collection._tracking_collections
+        ]
         old_coll_names.append(self.user_collection.name)
 
         new_name = 'USERS'
         self.user_collection = self.user_collection.rename(new_name)
-        new_coll_names = [coll.name for coll in
-                          self.user_collection._tracking_collections]
+        new_coll_names = [
+            coll.name for coll in self.user_collection._tracking_collections
+        ]
         new_coll_names.append(new_name)
 
         current_collections = self.database.list_collection_names()
@@ -380,8 +378,9 @@ class TestVersionedCollectionRegister(_BaseTest):
     def test_multiple_updates_to_doc_before_register(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
-        self.user_collection.update_one({'name': self.DOCUMENT['name']},
-                                        {"$set": {'age': 99}})
+        self.user_collection.update_one(
+            {'name': self.DOCUMENT['name']}, {"$set": {'age': 99}}
+        )
         sleep(SLEEP_TIME)
         self.user_collection.register('v1')
 
@@ -389,10 +388,12 @@ class TestVersionedCollectionRegister(_BaseTest):
         self.user_collection.init('v0')
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.register('v1')
-        self.user_collection.update_one({'name': self.DOCUMENT['name']},
-                                        {"$set": {'age': 99}})
-        self.user_collection.update_one({'name': self.DOCUMENT['name']},
-                                        {"$set": {'is_wizard': False}})
+        self.user_collection.update_one(
+            {'name': self.DOCUMENT['name']}, {"$set": {'age': 99}}
+        )
+        self.user_collection.update_one(
+            {'name': self.DOCUMENT['name']}, {"$set": {'is_wizard': False}}
+        )
         sleep(SLEEP_TIME)
         self.user_collection.register('v2')
 
@@ -402,28 +403,34 @@ class TestVersionedCollectionRegister(_BaseTest):
         self.assertTrue(self.user_collection.register('v1'))
         self.user_collection.insert_one(self.DOCUMENT)
         self.assertTrue(self.user_collection.register('v2'))
-        self.user_collection.update_one({'name': self.DOCUMENT['name']},
-                                        {"$set": {'age': 199}})
-        self.user_collection.update_one({'name': self.DOCUMENT['name']},
-                                        {"$set": {'is_wizard': False}})
+        self.user_collection.update_one(
+            {'name': self.DOCUMENT['name']}, {"$set": {'age': 199}}
+        )
+        self.user_collection.update_one(
+            {'name': self.DOCUMENT['name']}, {"$set": {'is_wizard': False}}
+        )
         sleep(SLEEP_TIME)
         self.assertTrue(self.user_collection.register('v3'))
         self.assertEqual(
-            3, self.user_collection._deltas_collection.count_documents({}))
+            3, self.user_collection._deltas_collection.count_documents({})
+        )
 
     def test_register_with_multiple_updates_from_empty_branch(self):
         self.user_collection.init('v0')
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.register('v1')
         self.user_collection.create_branch('b')
-        self.user_collection.update_one({'_id': self.DOCUMENT['_id']},
-                                        {"$set": {'name': 'GOETHE'}})
-        self.user_collection.update_one({'_id': self.DOCUMENT['_id']},
-                                        {"$set": {'is_wizard': False}})
+        self.user_collection.update_one(
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'name': 'GOETHE'}}
+        )
+        self.user_collection.update_one(
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'is_wizard': False}}
+        )
         sleep(SLEEP_TIME)
         self.user_collection.register('b_v0')
         self.assertEqual(
-            2, self.user_collection._deltas_collection.count_documents({}))
+            2, self.user_collection._deltas_collection.count_documents({})
+        )
 
     def test_register_after_insert_and_delete(self):
         self.user_collection.init('v0')
@@ -464,7 +471,8 @@ class TestVersionedCollectionDiscardChanges(_BaseTest):
         original_doc = deepcopy(self.DOCUMENT)
         self.user_collection.init()
         self.user_collection.find_one_and_update(
-            filter={'name': 'Goethe'}, update={"$set": {'name': 'GOETHE'}})
+            filter={'name': 'Goethe'}, update={"$set": {'name': 'GOETHE'}}
+        )
         self.user_collection.delete_one({'name': 'Euler'})
         self.assertEqual(2, self.user_collection.count_documents({}))
         self.user_collection.discard_changes()
@@ -500,7 +508,7 @@ class TestVersionedCollectionDiscardChanges(_BaseTest):
         self.user_collection.find_one_and_update(
             filter={'name': 'Goethe'},
             update={"$set": {'name': 'Goethe'}},
-            upsert=True
+            upsert=True,
         )
         self.assertTrue(self.user_collection.has_changes())
         self.assertTrue(self.user_collection.discard_changes())
@@ -510,9 +518,7 @@ class TestVersionedCollectionDiscardChanges(_BaseTest):
     def test_discard_changes_handles_upserts2(self):
         self.user_collection.init()
         self.user_collection.find_one_and_replace(
-            filter={'name': 'Goethe'},
-            replacement=self.DOCUMENT,
-            upsert=True
+            filter={'name': 'Goethe'}, replacement=self.DOCUMENT, upsert=True
         )
         self.assertTrue(self.user_collection.has_changes())
         self.assertTrue(self.user_collection.discard_changes())
@@ -524,7 +530,7 @@ class TestVersionedCollectionDiscardChanges(_BaseTest):
         self.user_collection.update_one(
             filter={'name': 'Goethe'},
             update={"$set": {'name': 'Goethe'}},
-            upsert=True
+            upsert=True,
         )
         self.assertTrue(self.user_collection.has_changes())
         self.assertTrue(self.user_collection.discard_changes())
@@ -536,8 +542,9 @@ class TestVersionedCollectionDiscardChanges(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.delete_one({'_id': self.DOCUMENT['_id']})
         self.user_collection.insert_one(self.DOCUMENT)
-        self.user_collection.update_one({'_id': self.DOCUMENT['_id']},
-                                        {"$set": {'age': 69}})
+        self.user_collection.update_one(
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'age': 69}}
+        )
         self.user_collection.delete_one({'_id': self.DOCUMENT['_id']})
         self.assertEqual(0, self.user_collection.count_documents({}))
         self.user_collection.discard_changes()
@@ -547,8 +554,9 @@ class TestVersionedCollectionDiscardChanges(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         original_doc = deepcopy(self.DOCUMENT)
         self.user_collection.init('v0')
-        self.user_collection.update_one({'_id': self.DOCUMENT['_id']},
-                                        {"$set": {'age': 69}})
+        self.user_collection.update_one(
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'age': 69}}
+        )
         self.user_collection.delete_one({'_id': self.DOCUMENT['_id']})
         self.user_collection.discard_changes()
         self.assertEqual(1, self.user_collection.count_documents({}))
@@ -621,8 +629,8 @@ class TestVersionedCollectionStash(_BaseTest):
         self.user_collection.stash()
         self.user_collection.insert_one(self.DOCUMENT)
         with self.assertRaisesRegex(
-                InvalidOperation,
-                "Cannot apply stashed data because the collection has changes"
+            InvalidOperation,
+            "Cannot apply stashed data because the collection has changes",
         ):
             self.user_collection.stash_apply()
 
@@ -667,8 +675,9 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.insert_one(self.DOCUMENT2)
         self.user_collection.init()
-        self.user_collection.update_one({'name': 'Goethe'},
-                                        {"$set": {'name': 'GOETHE'}})
+        self.user_collection.update_one(
+            {'name': 'Goethe'}, {"$set": {'name': 'GOETHE'}}
+        )
         self.user_collection.delete_one({'name': 'Euler'})
         sleep(SLEEP_TIME)
         diffs = self.user_collection.diff(deep=True)
@@ -678,7 +687,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         ids = set(diffs.keys())
         doc_ids = {
             stringify_object_id(self.DOCUMENT['_id']),
-            stringify_object_id(self.DOCUMENT2['_id'])
+            stringify_object_id(self.DOCUMENT2['_id']),
         }
         self.assertEqual(ids, doc_ids)
 
@@ -686,8 +695,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init()
         self.user_collection.update_one(
-            {'name': 'Goethe'},
-            {"$set": {'name': 'GOETHE'}}
+            {'name': 'Goethe'}, {"$set": {'name': 'GOETHE'}}
         )
         sleep(SLEEP_TIME)
         diff = self.user_collection.diff(deep=True)[self.DOCUMENT['_id']]
@@ -734,8 +742,7 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT2)
         self.user_collection.init()
         self.user_collection.update_one(
-            {'_id': self.DOCUMENT2['_id']},
-            {"$set": {'new_field': 'new_value'}}
+            {'_id': self.DOCUMENT2['_id']}, {"$set": {'new_field': 'new_value'}}
         )
         diffs = self.user_collection.diff(0, direction='to', deep=True)
         self.assertEqual(1, len(diffs))
@@ -747,19 +754,16 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init()
         self.user_collection.update_one(
-            {'_id': self.DOCUMENT['_id']},
-            {"$set": {'field_1': 'value_1'}}
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'field_1': 'value_1'}}
         )
         self.user_collection.insert_one(self.DOCUMENT2)
         sleep(SLEEP_TIME)
         self.user_collection.register('v1')
         self.user_collection.update_one(
-            {'_id': self.DOCUMENT['_id']},
-            {"$set": {'field_2': 'value_2'}}
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'field_2': 'value_2'}}
         )
         self.user_collection.update_one(
-            {'_id': self.DOCUMENT2['_id']},
-            {"$set": {'field_1': 'value_1'}}
+            {'_id': self.DOCUMENT2['_id']}, {"$set": {'field_1': 'value_1'}}
         )
         sleep(SLEEP_TIME)
 
@@ -802,7 +806,8 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.assertEqual(2, len(diff_forward_2))
 
         pairs = [
-            (diff_forward_1, diff_backward_1), (diff_forward_2, diff_backward_2)
+            (diff_forward_1, diff_backward_1),
+            (diff_forward_2, diff_backward_2),
         ]
         for diff_forward, diff_backward in pairs:
             for obj_id in diff_forward.keys():
@@ -813,7 +818,7 @@ class TestVersionedCollectionDiff(_BaseTest):
                 self.assertIn('dictionary_item_added', diff_b)
                 self.assertEqual(
                     diff_f['dictionary_item_removed'],  # noqa
-                    diff_b['dictionary_item_added']  # noqa
+                    diff_b['dictionary_item_added'],  # noqa
                 )
 
     def test_diff_direction(self):
@@ -890,6 +895,15 @@ class TestVersionedCollectionCheckout(_BaseTest):
         with self.assertRaises(InvalidCollectionVersion):
             self.user_collection.checkout(1)
 
+    def test_checkout_on_invalid_state_raises_error(self):
+        self.user_collection.init()
+        self.user_collection.insert_one(self.DOCUMENT)
+        self.user_collection.register('v1')
+        self.user_collection._deltas_collection.drop()
+
+        with self.assertRaises(InvalidCollectionState):
+            self.user_collection.checkout(0)
+
     def _checkout_setup(self):
         # v0
         self.user_collection.init('v0')
@@ -901,7 +915,8 @@ class TestVersionedCollectionCheckout(_BaseTest):
         # v2
         self.user_collection.insert_one(self.DOCUMENT2)
         self.user_collection.find_one_and_update(
-            {'name': 'Goethe'}, {'$set': {'book': 'Faust'}})
+            {'name': 'Goethe'}, {'$set': {'book': 'Faust'}}
+        )
         self.user_collection.register('v2')
 
     def test_checkout_when_documents_are_deleted(self):
@@ -979,8 +994,7 @@ class TestVersionedCollectionBranching(_BaseTest):
     def test_illegal_branch_name(self):
         self.user_collection.init()
         with self.assertRaisesRegex(
-                ValueError,
-                "Branch names cannot start with '__'"
+            ValueError, "Branch names cannot start with '__'"
         ):
             self.user_collection.create_branch('__super_secret_branch')
 
@@ -1008,9 +1022,9 @@ class TestVersionedCollectionBranching(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT2)
         self.user_collection.register('v2')
 
-        n_branches = (self.user_collection
-                      ._branches_collection
-                      .count_documents({}))
+        n_branches = self.user_collection._branches_collection.count_documents(
+            {}
+        )
         self.assertEqual(n_branches, 2)
 
         new_br = self.user_collection._branches_collection.get_branch('branch')
@@ -1031,9 +1045,9 @@ class TestVersionedCollectionBranching(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT2)
         self.user_collection.register('v2')
 
-        n_branches = (self.user_collection
-                      ._branches_collection
-                      .count_documents({}))
+        n_branches = self.user_collection._branches_collection.count_documents(
+            {}
+        )
         self.assertEqual(n_branches, 2)
 
         branch = self.user_collection._branches_collection.get_branch('branch')
@@ -1125,9 +1139,7 @@ class TestVersionedCollectionBranching(_BaseTest):
 
         def _increase_v_and_update(doc):
             doc['v'] += 1
-            self.user_collection.find_one_and_replace(
-                {'_id': doc['_id']}, doc
-            )
+            self.user_collection.find_one_and_replace({'_id': doc['_id']}, doc)
 
         self.user_collection.init("0_m")
         self.DOCUMENT['v'] = 1
@@ -1276,9 +1288,7 @@ class TestVersionedCollectionBranching(_BaseTest):
     def test_branching_from_v0_with_init_state(self):
         def _increase_v_and_update(doc):
             doc['v'] += 1
-            self.user_collection.find_one_and_replace(
-                {'_id': doc['_id']}, doc
-            )
+            self.user_collection.find_one_and_replace({'_id': doc['_id']}, doc)
 
         self.DOCUMENT['v'] = 1
         self.DOCUMENT['_id'] = ObjectId()
@@ -1318,9 +1328,7 @@ class TestVersionedCollectionBranching(_BaseTest):
     def test_same_document_added_on_two_branches(self):
         def _increase_v_and_update(doc):
             doc['v'] += 1
-            self.user_collection.find_one_and_replace(
-                {'_id': doc['_id']}, doc
-            )
+            self.user_collection.find_one_and_replace({'_id': doc['_id']}, doc)
 
         self.DOCUMENT['v'] = 1
         self.DOCUMENT2['v'] = 1
@@ -1469,19 +1477,13 @@ class _RemoteBaseTest(TestCase):
         self.local = User(self.db_local)
         self.remote = User(self.db_remote)
 
-        self.DOCUMENT = {
-            'name': 'Goethe',
-            'emails': ['oh_my@goethe.de']
-        }
+        self.DOCUMENT = {'name': 'Goethe', 'emails': ['oh_my@goethe.de']}
 
-        self.DOCUMENT2 = {
-            'name': 'Euler',
-            'emails': ['euler@mathsclub.ch']
-        }
+        self.DOCUMENT2 = {'name': 'Euler', 'emails': ['euler@mathsclub.ch']}
 
         self.DOCUMENT3 = {
             'name': 'Gauss',
-            'emails': ['gauss@mathsclub.de', 'gauss@astronomyclub.de']
+            'emails': ['gauss@mathsclub.de', 'gauss@astronomyclub.de'],
         }
 
     def tearDown(self) -> None:
@@ -1535,8 +1537,7 @@ class TestVersionCollectionEquality(_RemoteBaseTest):
     def test_less_with_different_collection_types(self):
         other = pymongo.collection.Collection(self.db_local, 'User')
         with self.assertRaisesRegex(
-                TypeError,
-                "not supported between instances of"
+            TypeError, "not supported between instances of"
         ):
             _ = self.local < other
         other.drop()
@@ -1706,8 +1707,9 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
 
         self.assertEqual(self.remote.version, self.local.version)
         self.assertEqual(self.remote.branch, self.local.branch)
-        self.assertEqual(self.remote.count_documents({}),
-                         self.local.count_documents({}))
+        self.assertEqual(
+            self.remote.count_documents({}), self.local.count_documents({})
+        )
         self.assertEqual(self.remote.find_one({}), self.local.find_one({}))
         self.assertEqual(self.remote.get_log(), self.local.get_log())
         self.assertEqual(self.remote.branches(), self.local.branches())
@@ -1751,7 +1753,8 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
 
     def _update_remote_1(self):
         self.remote.update_one(
-            {'_id': self.DOCUMENT['_id']}, {"$set": {'new_field': 'value1'}})
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'new_field': 'value1'}}
+        )
         self.remote.register('v2_main')
 
     def _update_remote_2(self):
@@ -1785,11 +1788,11 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
         self.assertEqual(2, self.local.count_documents({}))
         self.assertEqual(
             self.local.find_one({'_id': self.DOCUMENT['_id']}),
-            self.remote.find_one({'_id': self.DOCUMENT['_id']})
+            self.remote.find_one({'_id': self.DOCUMENT['_id']}),
         )
         self.assertEqual(
             self.local.find_one({'_id': self.DOCUMENT3['_id']}),
-            self.remote.find_one({'_id': self.DOCUMENT3['_id']})
+            self.remote.find_one({'_id': self.DOCUMENT3['_id']}),
         )
 
         self.local.checkout(0, 'b')
@@ -1797,11 +1800,11 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
         self.assertEqual(3, self.local.count_documents({}))
         self.assertEqual(
             self.local.find_one({'_id': self.DOCUMENT['_id']}),
-            self.remote.find_one({'_id': self.DOCUMENT['_id']})
+            self.remote.find_one({'_id': self.DOCUMENT['_id']}),
         )
         self.assertEqual(
             self.local.find_one({'_id': self.DOCUMENT3['_id']}),
-            self.remote.find_one({'_id': self.DOCUMENT3['_id']})
+            self.remote.find_one({'_id': self.DOCUMENT3['_id']}),
         )
 
     def test_pull_another_branch_from_incomplete_branch(self):
@@ -1817,10 +1820,14 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
         local_log = self.local.get_log('b')
         remote_log = self.remote.get_log('b')
         self.assertEqual(len(remote_log), len(local_log))
-        self.assertTrue(all([
-            local_log[i].weakly_equals(remote_log[i])
-            for i in range(len(local_log))
-        ]))
+        self.assertTrue(
+            all(
+                [
+                    local_log[i].weakly_equals(remote_log[i])
+                    for i in range(len(local_log))
+                ]
+            )
+        )
 
     def test_pulling_when_local_diverged(self):
         self.local.init('v0')
@@ -1842,23 +1849,24 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
         # Test log entries are equal
         local_log.pop(0)
         remote_log = self.remote.get_log()
-        self.assertTrue(all([
-            local_log[i].weakly_equals(remote_log[i])
-            for i in range(len(local_log))
-        ]))
+        self.assertTrue(
+            all(
+                [
+                    local_log[i].weakly_equals(remote_log[i])
+                    for i in range(len(local_log))
+                ]
+            )
+        )
 
         self.assertEqual(3, self.local.count_documents({}))
         self.assertEqual(
-            self.DOCUMENT,
-            self.local.find_one({'_id': self.DOCUMENT['_id']})
+            self.DOCUMENT, self.local.find_one({'_id': self.DOCUMENT['_id']})
         )
         self.assertEqual(
-            self.DOCUMENT2,
-            self.local.find_one({'_id': self.DOCUMENT2['_id']})
+            self.DOCUMENT2, self.local.find_one({'_id': self.DOCUMENT2['_id']})
         )
         self.assertEqual(
-            self.DOCUMENT3,
-            self.local.find_one({'_id': self.DOCUMENT3['_id']})
+            self.DOCUMENT3, self.local.find_one({'_id': self.DOCUMENT3['_id']})
         )
 
     def test_pull_when_local_diverged_and_same_docs_were_modified(self):
@@ -1868,13 +1876,11 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
 
         # Local and Remote modify different fields of the same document
         self.local.update_one(
-            {'_id': self.DOCUMENT['_id']},
-            {"$set": {'local_field': True}}
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'local_field': True}}
         )
         self.local.insert_one(self.DOCUMENT2)
         self.remote.update_one(
-            {'_id': self.DOCUMENT['_id']},
-            {"$set": {'remote_field': True}}
+            {'_id': self.DOCUMENT['_id']}, {"$set": {'remote_field': True}}
         )
         self.remote.insert_one(self.DOCUMENT3)
         sleep(SLEEP_TIME)
@@ -1897,12 +1903,10 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
         self.local.push(self.remote)
 
         self.local.update_one(
-            {'_id': self.DOCUMENT2['_id']},
-            {"$set": {'conflicting_field': 1}}
+            {'_id': self.DOCUMENT2['_id']}, {"$set": {'conflicting_field': 1}}
         )
         self.remote.update_one(
-            {'_id': self.DOCUMENT2['_id']},
-            {"$set": {'conflicting_field': -1}}
+            {'_id': self.DOCUMENT2['_id']}, {"$set": {'conflicting_field': -1}}
         )
         sleep(SLEEP_TIME)
         self.local.register('v1_local')
@@ -1921,14 +1925,14 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
             self.local.pull(self.remote)
 
         self.assertTrue(
-            self.local.resolve_conflicts(discard_local_changes=True))
+            self.local.resolve_conflicts(discard_local_changes=True)
+        )
         self.assertFalse(self.local.has_conflicts())
         self.assertEqual(self.remote.find_one({}), self.local.find_one({}))
         self.assertEqual(1, len(self.local.branches()))
 
     def test_pull_resolve_conflicts(
-            self,
-            interactively_resolve_conflicts=False
+        self, interactively_resolve_conflicts=False
     ):
         self._conflicts_simple_setup()
         with self.assertRaises(AutoMergeFailedError):
@@ -1970,7 +1974,7 @@ class TestVersionedCollectionPush(_RemoteBaseTest):
 
         self.assertTrue(self.local.delete_version_subtree(1, 'main'))
         with self.assertRaisesRegex(
-                InvalidOperation, "tip of your current branch is behind"
+            InvalidOperation, "tip of your current branch is behind"
         ):
             self.local.push(self.remote)
 
@@ -2077,11 +2081,14 @@ class TestVersionedCollectionPush(_RemoteBaseTest):
 
         # Assert remote in correct state
         self.assertIsNotNone(
-            self.remote.find_one({'_id': self.DOCUMENT['_id']}))
+            self.remote.find_one({'_id': self.DOCUMENT['_id']})
+        )
         self.assertIsNotNone(
-            self.remote.find_one({'_id': self.DOCUMENT2['_id']}))
+            self.remote.find_one({'_id': self.DOCUMENT2['_id']})
+        )
         self.assertIsNotNone(
-            self.remote.find_one({'_id': self.DOCUMENT3['_id']}))
+            self.remote.find_one({'_id': self.DOCUMENT3['_id']})
+        )
 
     def test_push_a_different_branch_than_the_current_one(self):
         self.local.init('v0')

@@ -3,7 +3,7 @@ from pymongo.database import Database
 
 
 class _BaseTrackerCollection(Collection):
-    """ Base class for all the helper tracking collection. """
+    """Base class for all the helper tracking collection."""
 
     _NAME_TEMPLATE = None
 
@@ -16,11 +16,12 @@ class _BaseTrackerCollection(Collection):
         return self.name == other.name
 
     def __hash__(self) -> int:
-        return 0  # dummy # pragma: nocover
+        # dummy
+        return 0  # pragma: nocover
 
     @classmethod
     def format_name(cls, collection_name: str) -> str:
-        """ Returns this collection's name.
+        """Return this collection's name.
 
         Formats and returns this collection's name by appending the name of
         the target tracked collection to it.
@@ -31,17 +32,17 @@ class _BaseTrackerCollection(Collection):
         return cls._NAME_TEMPLATE.format(collection_name)
 
     def exists(self) -> bool:
-        """ Checks whether this collection exists in the database. """
+        """Check whether this collection exists in the database."""
         return self.name in self.database.list_collection_names()
 
     def build(self, *args, **kwargs) -> None:
-        """ Creates the collection on the database. """
+        """Create the collection on the database."""
         if self.exists():
             return self.drop()
         self.database.create_collection(self.name)
 
     def rename(self, parent_collection_name: str, *args, **kwargs) -> None:
-        """ Renames this collection.
+        """Rename this collection.
 
          See the :meth:`rename` method of the collection superclass
          :class:`pymongo.collection.Collection` for more info.

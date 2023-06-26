@@ -49,7 +49,11 @@ jobs:
       - name: Install dependencies
         if: ${{ steps.cache-python.outputs.cache-hit != 'true' }}
         run: |
-          pip -v install -e ".[tests]"
+          pip -v install -e ".[tests, lint]"
+          pip install nox
+
+      - name: Lint
+        run: nox -s lint
 
       - name: Test CLI installation
         run: |
@@ -68,7 +72,7 @@ jobs:
           mongodb-replica-set: test-rs
 
       - name: Run Tests
-        run: scripts/run_tests.sh
+        run: nox -s tests
 
       - name: Coverage comment
         id: coverage_comment
@@ -91,8 +95,6 @@ jobs:
     needs: run-tests
     steps:
       - uses: actions/checkout@v3
-        with:
-          ref: main
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -117,12 +119,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
-        run: |
-          pip install -r docs/requirements.txt
-
       - name: Build the docs
-        run: bash scripts/build_docs.sh
+        run: |
+          pip install nox
+          nox -s docs
+
 
   build-and-deploy:
     runs-on: ubuntu-latest

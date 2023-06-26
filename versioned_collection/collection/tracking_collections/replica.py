@@ -1,11 +1,12 @@
 from pymongo.database import Database
 
-from versioned_collection.collection.tracking_collections import \
-    _BaseTrackerCollection
+from versioned_collection.collection.tracking_collections import (
+    _BaseTrackerCollection,
+)
 
 
 class ReplicaCollection(_BaseTrackerCollection):
-    """ A snapshot of the latest tracked version of the target collection.
+    """A snapshot of the latest tracked version of the target collection.
 
     When the target collection is initialised for versioning, or when changes
     to a previous version of the target collection are tried to be made, i.e.,
@@ -19,17 +20,16 @@ class ReplicaCollection(_BaseTrackerCollection):
     new version of it is registered.
 
     """
+
     _NAME_TEMPLATE = '__replica_{}'
 
-    def __init__(self,
-                 database: Database,
-                 parent_collection_name: str,
-                 **kwargs
-                 ) -> None:
+    def __init__(
+        self, database: Database, parent_collection_name: str, **kwargs
+    ) -> None:
         super().__init__(database, parent_collection_name, **kwargs)
 
     def build(self):
-        """ Builds this collection on the database.
+        """Build this collection on the database.
 
         Upon the creation of this collection a snapshot of the target
         collection is created as well, i.e., this collection will be a
@@ -39,7 +39,6 @@ class ReplicaCollection(_BaseTrackerCollection):
 
     def create_snapshot(self) -> None:
         # Replicate the data from the target collection to the replica.
-        self.database[self._target_collection_name].aggregate([
-            {"$match": {}},
-            {"$out": self.name}
-        ])
+        self.database[self._target_collection_name].aggregate(
+            [{"$match": {}}, {"$out": self.name}]
+        )

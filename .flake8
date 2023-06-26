@@ -1,0 +1,37 @@
+[flake8]
+exclude =
+    .git,
+    .venv,
+    .tox,
+    .hypothesis,
+    .github,
+    .nox,
+    dist,
+    build,
+    test-results,
+    tests/*,
+    setup.py,
+    examples/*,
+    version.py,
+    docs/,
+    .ci/,
+    vc_cli/
+
+max-line-length = 80
+select = A,ANN,B,B9,B950,C,D,DAR,E,F,N,PT,S,T4,W
+ignore =
+    ANN101, ANN102, E203, E501, W503, D107, D102, N818, DAR201, D105,
+    D100, B907, B028, D104, DAR101, DAR402, DAR003, S101, B905, N806,
+    B904,
+    D101,
+    S404,
+application-import-names = versioned_collection,tests
+import-order-style = google
+per-file-ignores =
+    tests/*:B950,S101,D100,D101,D102,D103,D104,D106,D107
+    feature_tests/*:B950,S101,D100,D101,D102,D103,D104,D106,D107
+    conftest.py:D100,D101,D102,D103
+    noxfile.py:D100,D101,D102,D103,DAR101
+    versioned_collection/utils/*: D100, D103
+    versioned_collection/collection/tracking_collections/*: D106
+docstring_style = sphinx
