@@ -549,6 +549,7 @@ class VersionedCollection(Collection):
 
         # Start listening to this collection
         self._start_listener()
+        self._locked = False
 
     def _start_listener(self) -> None:
         """Start the listener for this collection.

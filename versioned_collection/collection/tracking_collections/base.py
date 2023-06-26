@@ -16,7 +16,8 @@ class _BaseTrackerCollection(Collection):
         return self.name == other.name
 
     def __hash__(self) -> int:
-        return 0  # dummy # pragma: nocover
+        # dummy
+        return 0  # pragma: nocover
 
     @classmethod
     def format_name(cls, collection_name: str) -> str:

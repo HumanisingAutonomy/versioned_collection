@@ -30,13 +30,7 @@ def _tests(
 ) -> None:
     if install_dependencies:
         session.install(".[tests]")
-    session.run('coverage', 'run', '-m', 'unittest', 'discover', 'tests')
-    session.run('mkdir', '.coverage_splits')
-    session.run('bash', '-c', 'mv .coverage.*.*.* .coverage_splits')
-    session.run('touch', '.coverage')
-    session.run('coverage', 'combine', '.coverage', '.coverage_splits/')
-    session.run('rm', '-rf', '.coverage_splits')
-    session.run('coverage', 'report')
+    session.run('./scripts/run_tests.sh')
     session.run('coverage', report_format)
 
 

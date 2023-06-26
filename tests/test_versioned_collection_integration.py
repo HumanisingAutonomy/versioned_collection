@@ -895,6 +895,15 @@ class TestVersionedCollectionCheckout(_BaseTest):
         with self.assertRaises(InvalidCollectionVersion):
             self.user_collection.checkout(1)
 
+    def test_checkout_on_invalid_state_raises_error(self):
+        self.user_collection.init()
+        self.user_collection.insert_one(self.DOCUMENT)
+        self.user_collection.register('v1')
+        self.user_collection._deltas_collection.drop()
+
+        with self.assertRaises(InvalidCollectionState):
+            self.user_collection.checkout(0)
+
     def _checkout_setup(self):
         # v0
         self.user_collection.init('v0')
