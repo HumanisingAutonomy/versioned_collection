@@ -347,8 +347,7 @@ class VersionedCollection(Collection):
         """Get the tree of register versions of this collection."""
         return self._log_collection.log_tree
 
-    @staticmethod
-    def _check_for_changes(op: str):
+    def _check_for_changes(op: str):  # noqa: B902
         """Check if the operation has modified the collection.
 
         A decorator inspecting the result returned by various potentially
@@ -472,8 +471,7 @@ class VersionedCollection(Collection):
 
         self._should_reload_tracking_cache = False
 
-    @staticmethod
-    def _synchronize(func):
+    def _synchronize(func):  # noqa: B902
         """Lock this collection for versioning operations.
 
         .. warning::
@@ -2678,3 +2676,6 @@ class VersionedCollection(Collection):
     @_check_for_changes('aggregate')
     def aggregate(self, pipeline, *args, **kwargs):
         return super().aggregate(pipeline, *args, **kwargs)
+
+    _synchronize = staticmethod(_synchronize)
+    _check_for_changes = staticmethod(_check_for_changes)
