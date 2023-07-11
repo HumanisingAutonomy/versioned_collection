@@ -879,6 +879,7 @@ class VersionedCollection(Collection):
             port=int(address[1]),
             username=credentials[0],
             password=credentials[1],
+            directConnection=True,
         )
         database = client[database_name]
 

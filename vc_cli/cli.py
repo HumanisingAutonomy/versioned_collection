@@ -103,6 +103,7 @@ def _load_versioned_collection(
         port=int(mongo_cfg['port']),
         username=mongo_cfg.get('username', None),
         password=mongo_cfg.get('password', None),
+        directConnection=True,
     )
 
     vc = VersionedCollection(

@@ -175,7 +175,11 @@ class CollectionListener:
         :param lock: A lock used to synchronise the shared variables.
         """
         client = MongoClient(
-            host=host, port=port, username=username, password=password
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            directConnection=True,
         )
         target_collection = client[database_name][collection_name]
 
