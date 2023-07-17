@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List, TypedDict, Literal
 
 from bson import ObjectId
 from pymongo.database import Database
@@ -10,6 +9,12 @@ from pymongo.database import Database
 from versioned_collection.collection.tracking_collections import (
     _BaseTrackerCollection,
 )
+
+
+class ModifiedTracker(TypedDict):
+    """Representation for a modified document and its list of trackers."""
+    _id: ObjectId
+    tracker_ids: List[ObjectId]
 
 
 class ModifiedCollection(_BaseTrackerCollection):
@@ -57,24 +62,21 @@ class ModifiedCollection(_BaseTrackerCollection):
     def has_changes(self) -> bool:
         return self.count_documents({}) > 0
 
-    def find_modified_documents_ids(
-        self,
-    ) -> List[Dict[str, Union[ObjectId, List[ObjectId]]]]:
-        """Return the ids of the modified documents.
+    def get_modified_trackers(self) -> List[ModifiedTracker]:
+        """Get the modified document ids and the ids of the trackers.
 
         :return: A list of documents containing the ids of the modified
             documents in the tracked collection and the ids of the trackers
-            in this collection.
+            in this collection, grouped by the modified document ids.
         """
         docs = self.aggregate([
-            {"$match": {}},
             {"$group": {'_id': "$id", 'tracker_ids': {"$push": "$_id"}}},
         ])
         return list(docs)
 
     def get_modified_document_ids_by_operation(
         self,
-    ) -> Dict[str, List[ObjectId]]:
+    ) -> Dict[Literal['i', 'd', 'u'], List[ObjectId]]:
         """Return the document ids grouped by the operation type.
 
         :return: The list of ids of the modified documents grouped by the
@@ -82,17 +84,25 @@ class ModifiedCollection(_BaseTrackerCollection):
             inserts, ``'d'`` for deletes and ``'u'`` for updates and
             replacements.
         """
-        docs = list(self.find({}, projection={'_id': False}))
-        docs_per_operation = defaultdict(list)
-        for doc in docs:
-            docs_per_operation[doc['op']].append(doc['id'])
-        return dict(docs_per_operation)
+        docs = self.aggregate([
+            {"$group": {'_id': "$op", 'ids': {"$addToSet": "$id"}}},
+            {"$replaceRoot": {
+                'newRoot': {"$arrayToObject": [[{'k': "$_id", 'v': "$ids"}]]}
+            }},
+            # merge the results into a single document
+            {"$group": {'_id': 0, 'aggregated_ops': {"$push": "$$ROOT"}}},
+            {"$replaceRoot": {
+                'newRoot': {"$mergeObjects": "$aggregated_ops"}
+            }},
+            {"$project": {'_id': False}}
+        ])
+        return next(docs)
 
     def delete_modified(self, ids: List[ObjectId]) -> None:
         """Delete the tracked documents from this collection.
 
         .. note::
-            This deletes only one of the modification trackers. A document
+            This deletes only one of the trackers documents. A document
             from the tracked collection that has been modified multiple times
             has multiple trackers in this collection.
 

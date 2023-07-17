@@ -35,6 +35,7 @@ authors = [
 [project.optional-dependencies]
 tests = [
     "coverage[toml]>=7.0.0",
+    "pymongo-inmemory"
 ]
 
 lint = [

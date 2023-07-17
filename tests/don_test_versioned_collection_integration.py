@@ -991,6 +991,9 @@ class TestVersionedCollectionCheckout(_BaseTest):
 
 class TestVersionedCollectionBranching(_BaseTest):
 
+    def test_create_branch_returns_none_if_collection_not_initialised(self):
+        self.assertIsNone(self.user_collection.create_branch('b'))
+
     def test_illegal_branch_name(self):
         self.user_collection.init()
         with self.assertRaisesRegex(

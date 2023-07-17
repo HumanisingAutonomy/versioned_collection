@@ -35,22 +35,28 @@ class _BaseTrackerCollection(Collection):
         """Check whether this collection exists in the database."""
         return self.name in self.database.list_collection_names()
 
-    def build(self, *args, **kwargs) -> None:
+    def build(self, *args, **kwargs) -> bool:
         """Create the collection on the database."""
         if self.exists():
-            return self.drop()
+            self.drop()
         self.database.create_collection(self.name)
+        return True
 
-    def rename(self, parent_collection_name: str, *args, **kwargs) -> None:
+    def rename(self, parent_collection_name: str, *args, **kwargs) -> bool:
         """Rename this collection.
 
-         See the :meth:`rename` method of the collection superclass
-         :class:`pymongo.collection.Collection` for more info.
+        See the :meth:`rename` method of the collection superclass
+        :class:`pymongo.collection.Collection` for more info.
+
+        The collection is renamed only if it physically exists in the database.
 
         :param parent_collection_name: The parent's collection name.
         :param args: the rest of the `args`.
         :param kwargs: the rest of the `kwargs`.
+        :return: Whether the collection has been renamed.
         """
-        name = self.format_name(parent_collection_name)
         if self.exists():
+            name = self.format_name(parent_collection_name)
             super().rename(new_name=name, *args, **kwargs)
+            return True
+        return False

@@ -56,7 +56,7 @@ class StashContainer:
         self.main_collection.rename(new_name, *args, **kwargs)
         self.modified_collection.rename(f'modified_{new_name}', *args, **kwargs)
 
-    def exists(self):
+    def exists(self) -> bool:
         main_exists = self.main_collection.exists()
         modified_exists = self.modified_collection.exists()
         assert main_exists == modified_exists

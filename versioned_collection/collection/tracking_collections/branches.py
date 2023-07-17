@@ -12,6 +12,9 @@ from versioned_collection.errors import BranchNotFound
 class BranchesCollection(_BaseTrackerCollection):
     """Stores information about the branch pointers.
 
+    .. warning::
+        This class should not be used directly by the user.
+
     Branches are pointers to specific version numbers and branch names on the
     version tree. The version tree is a tree that has as nodes the version
     identifiers, i.e., version id and branch name, of a version of the target
@@ -66,6 +69,7 @@ class BranchesCollection(_BaseTrackerCollection):
         """
         if self.exists():
             return False
+        self.create_index('name')
         self.create_branch(
             branch='main',
             pointing_to_collection_version=0,
@@ -116,7 +120,7 @@ class BranchesCollection(_BaseTrackerCollection):
     ) -> None:
         """Update the information about a branch pointer.
 
-        :raises ValueError: If no branch with name ``branch`` exists.
+        :raises BranchNotFound: If no branch with name ``branch`` exists.
 
         :param branch: The name of the branch to be updated.
         :param pointing_to_collection_version:  The new collection version to
@@ -126,9 +130,8 @@ class BranchesCollection(_BaseTrackerCollection):
         :param new_name: The new name of the branch.
         """
         if not self.has_branch(branch):
-            raise ValueError(
-                f"Branch {branch} does not exist, so it cannot be updated."
-            )
+            raise BranchNotFound(branch)
+
         new_data = self.SCHEMA(
             name=branch if new_name is None else new_name,
             points_to_collection_version=pointing_to_collection_version,
@@ -163,23 +166,16 @@ class BranchesCollection(_BaseTrackerCollection):
             branches for the given `branch` will be returned.
         :return: A list of branch data.
         """
-        branches = list(self.find({'points_to_branch': branch}))
-        if len(branches) == 1:
-            # Branch `branch` has no children
-            return []
-        ret = []
-        for b in branches:
-            if b['name'] == branch:
-                continue
-            if (
-                after_version is not None
-                and b['pointing_to_collection_version'] < after_version
-            ):
-                continue
-
-            b.pop('_id')
-            ret.append(self.SCHEMA(**b))
-        return ret
+        after_version = after_version or -1
+        branches = self.find(
+            filter={
+                'points_to_branch': branch,
+                "$expr": {"$ne": ['$name', '$points_to_branch']},
+                'points_to_collection_version': {"$gte": after_version}
+            },
+            projection={'_id': False}
+        )
+        return [self.SCHEMA(**b) for b in branches]
 
     def get_empty_branches(self) -> Set[BranchesCollection.SCHEMA]:
         """Return a set of empty branches data."""

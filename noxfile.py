@@ -2,7 +2,9 @@ from typing import Literal
 
 import nox
 
-nox.options.sessions = "tests"
+nox.options.sessions = [
+    "lint", "build", "install", "tests", "docs(docs_format='html')"
+]
 main_version = ["3.10"]
 supported_versions = main_version + []
 
@@ -58,6 +60,9 @@ def build(session: nox.Session):
 
 
 @nox.session(python=False)
+@nox.parametrize('docs_format', [
+    'html', 'xml', 'epub', 'dirhtml', 'man', 'text', 'latex', ''
+])
 def docs(session: nox.Session, docs_format: str = 'html'):
     session.run("pip", "install", "-r", "docs/requirements.txt")
     session.run("bash", "-c", f"cd docs && make {docs_format}")

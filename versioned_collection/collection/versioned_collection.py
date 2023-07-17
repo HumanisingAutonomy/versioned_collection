@@ -620,7 +620,7 @@ class VersionedCollection(Collection):
         )
 
     @_synchronize
-    def create_branch(self, branch_name: str) -> Tuple[int, str]:
+    def create_branch(self, branch_name: str) -> Optional[Tuple[int, str]]:
         """Create a branch with the given name and checks out to it.
 
         When creating a new branch changes are allowed to exist since the
@@ -654,8 +654,12 @@ class VersionedCollection(Collection):
         :param branch_name: The name of the new branch. Can be any string,
             but it cannot start with double underscore (``__``).
         :return: The version id and branch name of the version the new branch
-            points to, i.e., the previous position of the head.
+            points to, i.e., the previous position of the head, if the
+            collection is initialised for versioning, ``None`` otherwise.
         """
+        if not self.is_tracked():
+            return None
+
         if branch_name.startswith('__'):
             raise ValueError("Branch names cannot start with '__'")
 
@@ -763,7 +767,7 @@ class VersionedCollection(Collection):
         logs = [(log.version, log.branch) for log in logs]
 
         modified_tracker_docs = (
-            self._modified_collection.find_modified_documents_ids()
+            self._modified_collection.get_modified_trackers()
         )
 
         if len(modified_tracker_docs) == 0:
@@ -799,7 +803,7 @@ class VersionedCollection(Collection):
 
             # Make sure that all the changes are grabbed
             modified_tracker_docs = (
-                self._modified_collection.find_modified_documents_ids()
+                self._modified_collection.get_modified_trackers()
             )
 
         if not has_registered_deltas:
@@ -1494,7 +1498,7 @@ class VersionedCollection(Collection):
             if not self.has_changes():
                 return dict()
 
-        mod_ids = self._modified_collection.find_modified_documents_ids()
+        mod_ids = self._modified_collection.get_modified_trackers()
         mod_ids = [doc['_id'] for doc in mod_ids]
         if version is None and branch is None:
             # The other documents are in the replica collection

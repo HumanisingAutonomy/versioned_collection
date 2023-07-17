@@ -549,6 +549,7 @@ class DeltasCollection(_BaseTrackerCollection):
             {'collection_version_id': v, 'branch': b}
             for (v, b) in versions
         ]}
+        # fmt: on
 
         sort_stage = (
             [{"$sort": {'timestamp': sorting_order}}]
@@ -564,6 +565,7 @@ class DeltasCollection(_BaseTrackerCollection):
         ],
             allowDiskUse=True
         )
+        # fmt: on
         return documents
 
     def rebranch(

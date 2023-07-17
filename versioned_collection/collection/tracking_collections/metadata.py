@@ -1,4 +1,5 @@
 import dataclasses
+from copy import copy
 from typing import Optional
 
 from pymongo.database import Database
@@ -46,9 +47,13 @@ class MetadataCollection(_BaseTrackerCollection):
 
     @metadata.setter
     def metadata(self, metadata: SCHEMA):
+        if self._metadata == metadata:
+            return
         self._metadata = metadata
-        self.drop()
-        self.insert_one(self._metadata.__dict__)
+        self.find_one_and_replace(
+            filter={},
+            replacement=self._metadata.__dict__
+        )
 
     def set_metadata(
         self,
@@ -60,19 +65,16 @@ class MetadataCollection(_BaseTrackerCollection):
         has_conflicts: Optional[bool] = None,
     ) -> None:
         """Set some or all of the metadata attributes."""
-        metadata = self.metadata
-        if current_version is not None:
-            metadata.current_version = current_version
-        if current_branch is not None:
-            metadata.current_branch = current_branch
-        if detached is not None:
-            metadata.detached = detached
-        if changed is not None:
-            metadata.changed = changed
-        if has_stash is not None:
-            metadata.has_stash = has_stash
-        if has_conflicts is not None:
-            metadata.has_conflicts = has_conflicts
+        metadata = copy(self.metadata)
+
+        metadata.current_version = (
+            current_version or self.metadata.current_version
+        )
+        metadata.current_branch = current_branch or self.metadata.current_branch
+        metadata.detached = detached or self.metadata.detached
+        metadata.changed = changed or self.metadata.changed
+        metadata.has_stash = has_stash or self.metadata.has_stash
+        metadata.has_conflicts = has_conflicts or self.metadata.has_conflicts
         self.metadata = metadata
 
     def build(self) -> bool:
