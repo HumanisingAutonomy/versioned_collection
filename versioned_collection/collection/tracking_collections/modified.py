@@ -98,6 +98,13 @@ class ModifiedCollection(_BaseTrackerCollection):
         ])
         return next(docs)
 
+    def get_unique_modified_document_ids(self) -> List[ObjectId]:
+        """Get the unique ids of the modified documents. """
+        result = self.aggregate([
+            {"$group": {'_id': 0, 'ids': {"$addToSet": "$id"}}},
+        ])
+        return next(result)['ids']
+
     def delete_modified(self, ids: List[ObjectId]) -> None:
         """Delete the tracked documents from this collection.
 

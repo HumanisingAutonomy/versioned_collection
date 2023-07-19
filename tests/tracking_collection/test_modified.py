@@ -155,6 +155,14 @@ class TestModifiedCollection(InMemoryDatabaseSetup):
         doc_ids.add(doc_id_3)
         self.assertEqual(doc_ids, set(result['u']))
 
+    @build_and_destroy_collection
+    def test_get_unique_modified_document_ids(self):
+        doc_id_1, _ = self._setup_one_doc_many_ops()
+        doc_id_2, _ = self._setup_one_doc_many_ops()
+
+        result = set(self.collection.get_unique_modified_document_ids())
+        self.assertEqual({doc_id_1, doc_id_2}, result)
+
     def test_delete_modified(self):
         ids_to_delete = [ObjectId() for _ in range(5)]
         with patch.object(pymongo.collection.Collection, 'delete_many') as mock:

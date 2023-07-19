@@ -82,10 +82,10 @@ class StashContainer:
         self.modified_collection.drop()
         self.main_collection.drop()
 
-        modified_collection.aggregate(
-            [{"$match": {}}, {"$out": self.modified_collection.name}]
-        )
-        ids = list({doc['id'] for doc in modified_collection.find()})
+        modified_collection.aggregate([
+            {"$match": {}}, {"$out": self.modified_collection.name}
+        ])
+        ids = modified_collection.get_unique_modified_document_ids()
         main_collection.aggregate([
             {"$match": {'_id': {"$in": ids}}},
             {"$out": self.main_collection.name},
@@ -102,9 +102,13 @@ class StashContainer:
         :param modified_collection: The collection that tracks the ids of the
             modified documents, i.e., ``__modified_<tracked_collection_name>``.
         """
-        ids = list({doc['id'] for doc in self.modified_collection.find()})
+        ids = next(self.modified_collection.aggregate([
+            {"$group": {'_id': 0, 'ids': {"$addToSet": "$id"}}},
+        ]))['ids']
+
         existing_ids = main_collection.find(
-            {'_id': {"$in": ids}}, projection={'_id': True}
+            {'_id': {"$in": ids}},
+            projection={'_id': True},
         )
         existing_ids = [d['_id'] for d in existing_ids]
         if len(existing_ids):

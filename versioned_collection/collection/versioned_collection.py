@@ -1256,6 +1256,7 @@ class VersionedCollection(Collection):
             return False
 
         if self.has_changes():
+            # TODO: allow this after improving the merging functionality?
             raise InvalidOperation(
                 "Cannot apply stashed data because the collection has changes."
                 "Either register a new version or discard the current changes "
