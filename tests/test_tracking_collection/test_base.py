@@ -3,7 +3,8 @@ from unittest.mock import patch
 import pymongo
 import pymongo.database
 
-from tests.tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from tests.test_tracking_collection.in_memory_database import \
+    InMemoryDatabaseSetup
 from versioned_collection.collection.tracking_collections import \
     _BaseTrackerCollection  # noqa
 

@@ -5,9 +5,8 @@ import pymongo.collection
 from bson import ObjectId
 
 import versioned_collection.collection.tracking_collections
-from tests.tracking_collection.in_memory_database import (
+from tests.test_tracking_collection.in_memory_database import \
     InMemoryDatabaseSetup
-)
 from versioned_collection.collection.tracking_collections import (
     StashContainer, StashCollection
 )

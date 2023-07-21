@@ -3,9 +3,8 @@ from unittest.mock import patch, MagicMock
 import pymongo.collection
 import pymongo.database
 
-from tests.tracking_collection.in_memory_database import (
+from tests.test_tracking_collection.in_memory_database import \
     InMemoryDatabaseSetup
-)
 from versioned_collection.collection.tracking_collections import \
     ReplicaCollection
 

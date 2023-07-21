@@ -1,6 +1,6 @@
 import pymongo
 
-from .common import _BaseTest
+from tests.test_versioned_collection.common import _BaseTest
 
 
 class TestVersionedCollectionBasics(_BaseTest):

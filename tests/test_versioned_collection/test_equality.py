@@ -1,24 +1,7 @@
-from copy import deepcopy
-from time import sleep
-from typing import List
-from unittest import TestCase
-
 import pymongo
-from bson import ObjectId
-from pymongo import MongoClient
 
+from tests.test_versioned_collection.common import _RemoteBaseTest
 from versioned_collection import VersionedCollection
-from versioned_collection.errors import (
-    CollectionAlreadyInitialised,
-    InvalidOperation,
-    InvalidCollectionVersion,
-    BranchNotFound,
-    InvalidCollectionState,
-    AutoMergeFailedError,
-)
-from versioned_collection.utils.serialization import stringify_object_id
-
-from .common import _BaseTest, SLEEP_TIME, _RemoteBaseTest
 
 
 class TestVersionCollectionEquality(_RemoteBaseTest):

@@ -1,12 +1,12 @@
 from copy import deepcopy
 from time import sleep
 
+from tests.test_versioned_collection.common import SLEEP_TIME, _RemoteBaseTest
 from versioned_collection.errors import (
     InvalidOperation,
     InvalidCollectionState,
     AutoMergeFailedError,
 )
-from .common import SLEEP_TIME, _RemoteBaseTest
 
 
 class TestVersionedCollectionPull(_RemoteBaseTest):

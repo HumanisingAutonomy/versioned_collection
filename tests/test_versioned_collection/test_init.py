@@ -1,9 +1,9 @@
 from time import sleep
 
+from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME, User
 from versioned_collection.errors import (
     CollectionAlreadyInitialised,
 )
-from .common import _BaseTest, SLEEP_TIME, User
 
 
 class TestVersionedCollectionInit(_BaseTest):

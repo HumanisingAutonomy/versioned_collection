@@ -5,7 +5,7 @@ import os
 import subprocess
 import warnings
 from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
+from copy import deepcopy, copy
 from functools import partial, wraps
 from multiprocessing import cpu_count, Pool
 from shutil import rmtree
@@ -1661,7 +1661,7 @@ class VersionedCollection(Collection):
     def status(self) -> Dict[str, Union[str, bool, int]]:
         """Return the status of this collection."""
         if self._tracked:
-            return self._meta_collection.metadata.__dict__
+            return copy(self._meta_collection.metadata.__dict__)
         else:
             return {'tracked': False}
 

@@ -1,6 +1,6 @@
 from time import sleep
 
-from .common import _BaseTest, SLEEP_TIME
+from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME
 
 
 class TestVersionedCollectionRegister(_BaseTest):

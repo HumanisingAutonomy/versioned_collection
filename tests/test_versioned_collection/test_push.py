@@ -1,9 +1,8 @@
+from tests.test_versioned_collection.common import _RemoteBaseTest
 from versioned_collection import VersionedCollection
 from versioned_collection.errors import (
     InvalidOperation,
 )
-
-from .common import _RemoteBaseTest
 
 
 class TestVersionedCollectionPush(_RemoteBaseTest):

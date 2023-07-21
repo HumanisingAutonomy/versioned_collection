@@ -1,10 +1,10 @@
 from time import sleep
 
+from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME
 from versioned_collection.errors import (
     InvalidCollectionVersion,
 )
 from versioned_collection.utils.serialization import stringify_object_id
-from .common import _BaseTest, SLEEP_TIME
 
 
 class TestVersionedCollectionDiff(_BaseTest):

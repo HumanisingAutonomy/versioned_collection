@@ -65,7 +65,7 @@ class MetadataCollection(_BaseTrackerCollection):
         has_conflicts: Optional[bool] = None,
     ) -> None:
         """Set some or all of the metadata attributes."""
-        metadata = self.metadata
+        metadata = copy(self.metadata)
 
         if current_version is not None:
             metadata.current_version = current_version

@@ -3,11 +3,11 @@ from time import sleep
 
 from bson import ObjectId
 
+from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME
 from versioned_collection.errors import (
     InvalidCollectionVersion,
     BranchNotFound,
 )
-from .common import _BaseTest, SLEEP_TIME
 
 
 class TestVersionedCollectionBranching(_BaseTest):

@@ -4,7 +4,8 @@ from unittest.mock import patch
 import pymongo
 
 import versioned_collection.errors as vc_errors
-from tests.tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from tests.test_tracking_collection.in_memory_database import \
+    InMemoryDatabaseSetup
 from versioned_collection.collection.tracking_collections import \
     BranchesCollection
 
@@ -262,14 +263,14 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
         self.assertEqual('empty_2_1', b1.name)
 
     def test_get_branch_names(self):
-        mock_branches = ['b1', 'b2',  'b3']
+        mock_branches = ['b1', 'b2', 'b3']
         with patch.object(pymongo.collection.Collection, 'distinct') as mock:
             mock.return_value = mock_branches
             branches = self.collection.get_branch_names()
             self.assertEqual(set(mock_branches), branches)
 
     def test_get_branch_names_integration(self):
-        expected_branches = ['b1', 'b2',  'b3']
+        expected_branches = ['b1', 'b2', 'b3']
         for b in expected_branches:
             self.collection.create_branch(b, 0, 'main')
         expected_branches.append('main')

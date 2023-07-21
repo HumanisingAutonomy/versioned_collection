@@ -1,8 +1,7 @@
+from tests.test_versioned_collection.common import _BaseTest
 from versioned_collection.errors import (
     InvalidOperation,
 )
-
-from .common import _BaseTest
 
 
 class TestVersionedCollectionStash(_BaseTest):

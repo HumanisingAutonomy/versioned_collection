@@ -2,7 +2,8 @@ from unittest.mock import patch
 
 import pymongo.collection
 
-from tests.tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from tests.test_tracking_collection.in_memory_database import \
+    InMemoryDatabaseSetup
 from versioned_collection.collection.tracking_collections import \
     MetadataCollection
 
@@ -82,5 +83,19 @@ class TestMetadataCollection(InMemoryDatabaseSetup):
             args = mock.call_args[1]
             self.assertEqual(args['filter'], {})
 
+            args['replacement'].pop('_id')
+            self.assertEqual(new_metadata, args['replacement'])
+
+    def test_metadata_set_changed(self):
+        with patch.object(
+            pymongo.collection.Collection,
+            'find_one_and_replace'
+        ) as mock:
+            self.collection.set_metadata(changed=True)
+            mock.assert_called_once()
+            args = mock.call_args[1]
+            self.assertEqual(args['filter'], {})
+            new_metadata = self._original_metadata.__dict__
+            new_metadata['changed'] = True
             args['replacement'].pop('_id')
             self.assertEqual(new_metadata, args['replacement'])

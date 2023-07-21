@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pymongo.collection
 from bson import ObjectId
 
-from tests.tracking_collection.in_memory_database import (
+from tests.test_tracking_collection.in_memory_database import (
     InMemoryDatabaseSetup, build_and_destroy_collection
 )
 from versioned_collection.collection.tracking_collections import \
