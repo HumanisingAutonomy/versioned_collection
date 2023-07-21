@@ -84,7 +84,7 @@ class ModifiedCollection(_BaseTrackerCollection):
             inserts, ``'d'`` for deletes and ``'u'`` for updates and
             replacements.
         """
-        docs = self.aggregate([
+        docs = list(self.aggregate([
             {"$group": {'_id': "$op", 'ids': {"$addToSet": "$id"}}},
             {"$replaceRoot": {
                 'newRoot': {"$arrayToObject": [[{'k': "$_id", 'v': "$ids"}]]}
@@ -95,8 +95,8 @@ class ModifiedCollection(_BaseTrackerCollection):
                 'newRoot': {"$mergeObjects": "$aggregated_ops"}
             }},
             {"$project": {'_id': False}}
-        ])
-        return next(docs)
+        ]))
+        return dict() if len(docs) == 0 else docs[0]
 
     def get_unique_modified_document_ids(self) -> List[ObjectId]:
         """Get the unique ids of the modified documents. """

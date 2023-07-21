@@ -65,16 +65,20 @@ class MetadataCollection(_BaseTrackerCollection):
         has_conflicts: Optional[bool] = None,
     ) -> None:
         """Set some or all of the metadata attributes."""
-        metadata = copy(self.metadata)
+        metadata = self.metadata
 
-        metadata.current_version = (
-            current_version or self.metadata.current_version
-        )
-        metadata.current_branch = current_branch or self.metadata.current_branch
-        metadata.detached = detached or self.metadata.detached
-        metadata.changed = changed or self.metadata.changed
-        metadata.has_stash = has_stash or self.metadata.has_stash
-        metadata.has_conflicts = has_conflicts or self.metadata.has_conflicts
+        if current_version is not None:
+            metadata.current_version = current_version
+        if current_branch is not None:
+            metadata.current_branch = current_branch
+        if detached is not None:
+            metadata.detached = detached
+        if changed is not None:
+            metadata.changed = changed
+        if has_stash is not None:
+            metadata.has_stash = has_stash
+        if has_conflicts is not None:
+            metadata.has_conflicts = has_conflicts
         self.metadata = metadata
 
     def build(self) -> bool:
