@@ -1,6 +1,6 @@
 import dataclasses
 import datetime
-from typing import Dict, Optional, List, Tuple, Union
+from typing import Dict, Optional, List, Tuple, TypedDict
 
 import pymongo
 from bson import ObjectId
@@ -18,6 +18,11 @@ from versioned_collection.errors import (
 )
 from versioned_collection.tree import Tree
 from versioned_collection.utils.data_structures import hashabledict
+
+
+class LogTreeIdentifier(TypedDict):
+    version: int
+    branch: str
 
 
 class LogsCollection(_BaseTrackerCollection):
@@ -115,7 +120,7 @@ class LogsCollection(_BaseTrackerCollection):
         super().__init__(database, parent_collection_name, **kwargs)
 
         self._log_tree: Optional[Tree] = None
-        self._levels: Optional[Dict[Dict[str, Union[int, str]], int]] = None
+        self._levels: Optional[Dict[LogTreeIdentifier, int]] = None
         # Load the log tree
         if self.exists():
             self._load_log_tree()
@@ -135,7 +140,8 @@ class LogsCollection(_BaseTrackerCollection):
                 root = entry
                 break
 
-        assert root is not None, "No root entry in the log tree!"
+        if root is None:
+            raise InvalidCollectionState("No root entry in the log tree!")
 
         # Build the tree and cache the level of each node.
         self._log_tree = Tree()
@@ -157,7 +163,14 @@ class LogsCollection(_BaseTrackerCollection):
             if node['prev'] is None:
                 parent = None
             else:
-                parent = log_entries[node['prev']]
+                try:
+                    parent = log_entries[node['prev']]
+                except KeyError as e:
+                    raise InvalidCollectionState(
+                        f"Found log entry with id {_id} whose parent "
+                        "does not exist."
+                    ) from e
+
                 parent = self._get_log_tree_identifier(
                     version=parent['version'], branch=parent['branch']
                 )
@@ -177,6 +190,14 @@ class LogsCollection(_BaseTrackerCollection):
                     child_doc['version'], child_doc['branch']
                 )
                 self._levels[child_node_id] = self._levels[node_identifier] + 1
+
+        if len(self._log_tree) != len(log_entries):
+            num_unconnected = len(log_entries) - len(self._log_tree)
+            raise InvalidCollectionState(
+                "The log tree has unconnected components. "
+                f"Found {num_unconnected} log entries that are not connected "
+                "to the main tree that is being built."
+            )
 
     def build(
         self,
@@ -233,7 +254,7 @@ class LogsCollection(_BaseTrackerCollection):
     def _get_log_tree_identifier(
         version: int,
         branch: str,
-    ) -> Dict[str, Union[int, str]]:
+    ) -> LogTreeIdentifier:
         """Create a hashable dictionary with the given fields."""
         return hashabledict({'version': version, 'branch': branch})
 
@@ -680,10 +701,10 @@ class LogsCollection(_BaseTrackerCollection):
             update={"$set": {"next": parent_node.data.next}},
         )
 
-    def get_branch_tips_versions(
+    def get_versions_of_branch_tips(
         self, version: Tuple[int, str]
     ) -> List[Tuple[int, str]]:
-        """Get the versions of the leafs of the subtree rooted in `version`.
+        """Get the versions of the leaves of the subtree rooted in `version`.
 
         :param version: A version in the log tree.
         :return: The versions of the tip of the branches of the log subtree

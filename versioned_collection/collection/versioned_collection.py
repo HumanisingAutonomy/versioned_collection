@@ -2590,7 +2590,7 @@ class VersionedCollection(Collection):
             )
         ]
 
-        leaves = self._log_collection.get_branch_tips_versions(version_id)
+        leaves = self._log_collection.get_versions_of_branch_tips(version_id)
         for _, leaf_branch in leaves:
             if leaf_branch != branch:
                 branches_to_delete.append(leaf_branch)
