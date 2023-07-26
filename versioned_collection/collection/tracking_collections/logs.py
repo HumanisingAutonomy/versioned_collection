@@ -1,6 +1,6 @@
 import dataclasses
 import datetime
-from typing import Dict, Optional, List, Tuple, TypedDict
+from typing import Dict, Optional, List, Tuple, TypedDict, Any
 
 import pymongo
 from bson import ObjectId
@@ -146,7 +146,7 @@ class LogsCollection(_BaseTrackerCollection):
         # Build the tree and cache the level of each node.
         self._log_tree = Tree()
         self._levels = dict()
-        to_visit = [root]
+        to_visit: List[Dict[str, Any]] = [root]
         root_identifier = self._get_log_tree_identifier(
             version=root['version'], branch=root['branch']
         )
@@ -155,7 +155,15 @@ class LogsCollection(_BaseTrackerCollection):
         while len(to_visit) > 0:
             node = to_visit.pop(-1)
 
-            _id = node.pop('_id')
+            try:
+                _id = node.pop('_id')
+            except KeyError as e:
+                raise InvalidCollectionState(
+                    "The log tree has cycles. Found log entry for "
+                    f"version '{node['version']}', branch '{node['branch']}' "
+                    "referenced from a subsequent node."
+                ) from e
+
             node_identifier = self._get_log_tree_identifier(
                 version=node['version'], branch=node['branch']
             )
@@ -311,8 +319,9 @@ class LogsCollection(_BaseTrackerCollection):
         .. note::
             The returned path includes the both ends.
 
-        :raises ValueError: If the current or target versions do not exist
-            in the log tree.
+        :raises InvalidCollectionVersion: If the current or target versions do
+            not exist in the log tree.
+
         :param current: The start point version.
         :param target: The end point version.
         :return: An ordered dictionary representing the path that has to be
@@ -324,7 +333,6 @@ class LogsCollection(_BaseTrackerCollection):
             the backward direction as ``-1``. The last entry, representing the
             target version, has the direction of the previous step as direction.
         """
-        _ERROR_MSG = "Version {} does not exist in the log tree!"
 
         if current == target:
             # The versions are the same, so there is no path.
@@ -334,13 +342,13 @@ class LogsCollection(_BaseTrackerCollection):
             self._get_log_tree_identifier(*current)
         )
         if current_node is None:
-            raise ValueError(_ERROR_MSG.format(current))
+            raise InvalidCollectionVersion(*current)
 
         target_node: Node = self._log_tree.get_node(
             self._get_log_tree_identifier(*target)
         )
         if target_node is None:
-            raise ValueError(_ERROR_MSG.format(target))
+            raise InvalidCollectionVersion(*target)
 
         # Find the path between the nodes by computing their lowest common
         # ancestor.
@@ -606,10 +614,11 @@ class LogsCollection(_BaseTrackerCollection):
             )
         except NodeIDAbsentError:
             raise BranchNotFound(branch)
-        if node is None:
-            raise InvalidCollectionState(
-                f"Branch {branch} does not have a parent"
-            )
+
+        # The only valid way for this to happen is if there are multiple roots,
+        # but this is checked during loading the log tree.
+        assert node is not None, f"Branch {branch} does not have a parent"
+
         return node.data.branch
 
     def get_parent_version(
@@ -629,8 +638,13 @@ class LogsCollection(_BaseTrackerCollection):
             node = self._log_tree.parent(version)
         except NodeIDAbsentError as e:
             raise InvalidCollectionVersion(
-                *version, message='Invalid collection version ({}, {})'
+                version=version['version'],
+                branch=version['branch'],
+                message='Invalid collection version ({}, {})'
             ) from e
+
+        assert node is not None, f"Version '{version}' does not have a parent."
+
         return node.data.version, node.data.branch
 
     def rebranch(self, version: Tuple[int, str], new_branch: str) -> None:
