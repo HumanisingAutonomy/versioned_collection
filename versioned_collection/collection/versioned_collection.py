@@ -1002,7 +1002,16 @@ class VersionedCollection(Collection):
 
         if self._current_version == -1:
             if version == 0 and branch == self._current_branch:
-                raise InvalidCollectionVersion(version, branch)
+                err_message = (
+                    "You tried to checkout to an nonexistent version of the "
+                    "target tracked collection. The version identified by "
+                    "(version_id: {}, branch: {}) does not exist."
+                )
+                raise InvalidCollectionVersion(
+                    version=version,
+                    branch=branch,
+                    message=err_message
+                )
 
             # The current branch is empty, i.e., there are no versions
             # registered on it. Move the HEAD to the base branch and continue

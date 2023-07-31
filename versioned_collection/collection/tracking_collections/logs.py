@@ -254,7 +254,7 @@ class LogsCollection(_BaseTrackerCollection):
         if not self.exists():
             return False
         self._log_tree = Tree()
-        self._levels = None
+        self._levels = dict()
         self.drop()
         return True
 
@@ -289,10 +289,13 @@ class LogsCollection(_BaseTrackerCollection):
         Looks up the current version in the log tree and returns the
         parent's node version number and the branch name.
 
-        :return: ``None`` if the collection is not tracked, or if the current
-            version is invalid or not registered, the version and branch name
-            of the previous node otherwise. If the current version is the root
-            version, ``-1`` will be returned as the previous version number.
+        :raises InvalidCollectionVersion: If the given version is invalid or
+            not registered.
+
+        :return: ``None`` if the collection is not tracked,
+            the version and branch name of the previous node otherwise.
+            If the current version is the root version, ``-1`` will be
+            returned as the previous version number.
         """
         if self._log_tree is None:
             return None
@@ -300,8 +303,9 @@ class LogsCollection(_BaseTrackerCollection):
         curr_node = self._log_tree.get_node(
             self._get_log_tree_identifier(current_version, current_branch)
         )
+
         if curr_node is None:
-            return None
+            raise InvalidCollectionVersion(current_version, current_branch)
 
         node = self._log_tree.parent(curr_node.identifier)
         if node is None:
@@ -419,11 +423,14 @@ class LogsCollection(_BaseTrackerCollection):
 
         The log entries are created and added to the log tree when a new
         version of the target collection is registered. This method updates
-        both the memory cached tree and the persistent database tree.
+        both the memory-cached tree and the persistent database tree.
+
+        :raises InvalidCollectionVersion: If the previous version and branch
+            do not exist.
 
         :param previous_version: The version id of the previous version, i.e.,
             the version which was modified to generate the version to be
-            registered. This should be `None` only for the first version.
+            registered. Must be ``-1`` only for the first version (root).
         :param previous_branch: The branch name of the previous version, i.e.,
             the branch on which the previous version was registered.
         :param current_branch: The branch on which the new version should be
@@ -441,16 +448,24 @@ class LogsCollection(_BaseTrackerCollection):
             previous_id = None
             prev_tree_node = None
         else:
-            # A previous logical version exists
+            previous_branch = previous_branch or current_branch
+
+            # A previous version exists
             identifier = self._get_log_tree_identifier(
                 previous_version, previous_branch
             )
             prev_tree_node = self._log_tree.get_node(identifier)
+
+            if prev_tree_node is None:
+                raise InvalidCollectionVersion(
+                    previous_version, previous_branch,
+                )
+
             previous_id = prev_tree_node.tag
 
             # If the previous version branch is different, then this is the
             # first node on a new branch, so set its version to 0, otherwise
-            # it is a node on an existing branch, so just increment the version
+            # just increment the version
             version = (
                 0
                 if previous_branch != current_branch
@@ -473,7 +488,7 @@ class LogsCollection(_BaseTrackerCollection):
             _log_data_dict['_id'] = with_id
         log_entry_id = self.insert_one(_log_data_dict).inserted_id
 
-        # Update the `next` list of the parent on the database
+        # Update the `next` list of the parent in the database
         if prev_tree_node is not None:
             next_nodes = prev_tree_node.data.next
             next_nodes.append(log_entry_id)
@@ -494,13 +509,13 @@ class LogsCollection(_BaseTrackerCollection):
         )
 
         # Update the node's cached level in the log tree.
-        if prev_tree_node is not None:
+        if prev_tree_node is None:
+            # root node
+            self._levels[identifier] = 0
+        else:
             self._levels[identifier] = (
                 self._levels[prev_tree_node.identifier] + 1
             )
-        else:
-            # root node
-            self._levels[identifier] = 0
 
         return version, current_branch
 
@@ -543,6 +558,8 @@ class LogsCollection(_BaseTrackerCollection):
                 )
         else:
             n_id = self._get_log_tree_identifier(version=version, branch=branch)
+            # Here leaf means leaf of the returned log, not necessarily a
+            # leaf in the log tree.
             leaf = self._log_tree.get_node(n_id)
             if leaf is None:
                 raise ValueError(
@@ -640,7 +657,6 @@ class LogsCollection(_BaseTrackerCollection):
             raise InvalidCollectionVersion(
                 version=version['version'],
                 branch=version['branch'],
-                message='Invalid collection version ({}, {})'
             ) from e
 
         assert node is not None, f"Version '{version}' does not have a parent."
@@ -691,16 +707,23 @@ class LogsCollection(_BaseTrackerCollection):
 
     def delete_subtree(self, version: Tuple[int, str]) -> None:
         """Delete the subtree of the version tree rooted in `version`."""
+        if version == (0, 'main'):
+            self.reset()
+            return
+
         version_identifier = self._get_log_tree_identifier(*version)
-        parent_node: Node = self._log_tree.parent(version_identifier)
+        try:
+            parent_node = self._log_tree.parent(version_identifier)
+        except NodeIDAbsentError as e:
+            raise InvalidCollectionVersion(
+                version=version[0],
+                branch=version[1],
+            ) from e
 
         tree = self._log_tree.subtree(self._get_log_tree_identifier(*version))
-        paths = {
-            (p['version'], p['branch'])
-            for paths in tree.paths_to_leaves()
-            for p in paths
-        }
-        cond = {"$or": [{'version': v, 'branch': b} for (v, b) in paths]}
+        paths_to_leaves = tree.paths_to_leaves()
+        versions = {v for paths in paths_to_leaves for v in paths}
+        cond = {"$or": list(versions)}
 
         version_db_id = tree.get_node(tree.root).tag
 
@@ -714,6 +737,9 @@ class LogsCollection(_BaseTrackerCollection):
             filter={'_id': parent_node.tag},
             update={"$set": {"next": parent_node.data.next}},
         )
+
+        for version in versions:
+            self._levels.pop(version, None)
 
     def get_versions_of_branch_tips(
         self, version: Tuple[int, str]

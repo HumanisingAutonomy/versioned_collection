@@ -2,7 +2,7 @@ import datetime
 from copy import deepcopy
 from typing import List, Dict, Any
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock, MagicMock
 
 import pymongo.collection
 from bson import ObjectId
@@ -13,6 +13,7 @@ from tests.test_tracking_collection.in_memory_database import \
     InMemoryDatabaseSetup
 from versioned_collection.collection.tracking_collections import \
     LogsCollection
+from versioned_collection.utils.data_structures import hashabledict
 
 
 class TestLogSchema(TestCase):
@@ -174,7 +175,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
 
         # regardless of which root is document is picked up first, this error
         # must be raised because otherwise all documents could have been reached
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             vc_errors.InvalidCollectionState, 'unconnected components'
         ):
             _col = self._get_collection()
@@ -329,15 +330,28 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
     def test_uninitialised_collection_does_not_contain_any_versions(self):
         # if it contains any versions, one of them MUST be (0, 'main')
         col = self._get_collection()
+        self.assertIsNone(col.log_tree)
         self.assertFalse(col.contains_version(0, 'main'))
 
     def test_get_log_entry_returns_none_if_entry_does_not_exist(self):
         col = self._get_collection()
+        self.assertIsNone(col.log_tree)
         self.assertIsNone(col.get_log_entry(0, 'main'))
 
     def test_get_log_doc_id_returns_none_if_collection_not_initialised(self):
         col = self._get_collection()
+        self.assertIsNone(col.log_tree)
         self.assertIsNone(col.get_log_doc_id(0, 'main'))
+
+    def test_get_prev_version_and_branch_returns_none_if_col_not_init(self):
+        col = self._get_collection()
+        self.assertIsNone(col.log_tree)
+        self.assertIsNone(col.get_previous_version_and_branch(1, 'main'))
+
+    def test_log_is_empty_when_col_not_initialised(self):
+        col = self._get_collection()
+        self.assertIsNone(col.log_tree)
+        self.assertEqual(0, len(col.get_log('main')))
 
     def test_cycle_detection_in_the_log_tree(self):
         root_id = ObjectId()
@@ -362,7 +376,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
         )
 
         self._initialise_database([root, child])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             vc_errors.InvalidCollectionState,
             "The log tree has cycles"
         ):
@@ -379,21 +393,21 @@ class TestLogsCollection(InMemoryDatabaseSetup):
 
         ::
 
-                                  v0_main
-                                     |
-                                   __/\__
-                                 /       \\
-                               /          \\
-                           v1_main      v0_b1
+                                   v0_main
+                                      |
+                                   __/\\__
+                                 /        \\
+                               /           \\
+                           v1_main       v0_b1
                              |
-                      ______/\_____
-                    /       |      \\
-                   /        |       \\
-               v2_main    v0_b2    v0_b3
+                      ______/\\_____
+                    /        |      \\
+                   /         |       \\
+               v2_main     v0_b2    v0_b3
                                      |
-                                  __/\__
-                                /       \\
-                             v1_b3     v0_b4
+                                  __/\\__
+                                /        \\
+                             v1_b3      v0_b4
 
        """
 
@@ -575,3 +589,263 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             {(1, 'b3'), (0, 'b4')},
             set(self.col.get_versions_of_branch_tips((0, 'b3')))
         )
+
+    def test_contains_version(self):
+        for e in self.log_entries.values():
+            self.assertTrue(self.col.contains_version(e.version, e.branch))
+
+    def test_get_prev_ver_and_branch_raises_error_if_called_with_version(self):
+        with self.assertRaises(vc_errors.InvalidCollectionVersion):
+            self.col.get_previous_version_and_branch(42, 'brr')
+
+    def test_get_prev_ver_and_branch_called_with_root_version(self):
+        self.assertEqual(
+            (-1, 'main'),
+            self.col.get_previous_version_and_branch(0, 'main')
+        )
+
+    def test_get_prev_ver_and_branch(self):
+        self.assertEqual(
+            (1, 'main'), self.col.get_previous_version_and_branch(0, 'b2')
+        )
+        self.assertEqual(
+            (0, 'b3'), self.col.get_previous_version_and_branch(0, 'b4')
+        )
+        self.assertEqual(
+            (0, 'b3'), self.col.get_previous_version_and_branch(1, 'b3')
+        )
+
+    def test_get_log_raises_error_if_given_non_existent_branch(self):
+        with self.assertRaisesRegex(ValueError, 'Invalid branch name'):
+            self.col.get_log(branch='brrr')
+
+    def test_get_log_raises_error_if_called_with_non_existent_version(self):
+        with self.assertRaisesRegex(ValueError, 'Invalid version'):
+            # wrong branch name and version
+            self.col.get_log(branch='brrr', version=0)
+
+            # correct branch, wrong version
+            self.col.get_log(branch='main', version=42)
+
+    def test_get_log_called_with_the_branch_name_returns_the_whole_path(self):
+        main_log = self.col.get_log(branch='main')
+        self.assertEqual(3, len(main_log))
+
+        # the log is in descending order
+        self.assertEqual(self.named_log_entries['v2_main'], main_log[0])
+        self.assertEqual(self.named_log_entries['v1_main'], main_log[1])
+        self.assertEqual(self.named_log_entries['v0_main'], main_log[2])
+
+        b4_log = self.col.get_log(branch='b4')
+        self.assertEqual(4, len(b4_log))
+        self.assertEqual(self.named_log_entries['v0_b4'], b4_log[0])
+        self.assertEqual(self.named_log_entries['v0_b3'], b4_log[1])
+        self.assertEqual(self.named_log_entries['v1_main'], b4_log[2])
+        self.assertEqual(self.named_log_entries['v0_main'], b4_log[3])
+
+        b1_log = self.col.get_log(branch='b1', return_ids=True)
+        self.assertEqual(2, len(b1_log))
+        self.assertEqual(self.named_versions_to_id['v0_b1'], b1_log[0].id)
+        self.assertEqual(self.named_versions_to_id['v0_main'], b1_log[1].id)
+
+    def test_get_log_from_a_specific_version(self):
+        self.assertEqual([
+            self.named_log_entries['v1_main'],
+            self.named_log_entries['v0_main']
+        ],
+            self.col.get_log('main', version=1)
+        )
+
+        self.assertEqual([
+            self.named_log_entries['v0_b3'],
+            self.named_log_entries['v1_main'],
+            self.named_log_entries['v0_main']
+        ],
+            self.col.get_log('b3', version=0)
+        )
+
+        self.assertEqual(
+            [self.named_log_entries['v0_main']],
+            self.col.get_log('main', version=0)
+        )
+
+    def test_delete_subtree_at_root_version(self):
+        self.col.delete_subtree((0, 'main'))
+
+        self.assertEqual(0, len(self.col.log_tree))
+        self.assertIsNone(self.col.find_one({}))
+
+    def test_delete_subtree_with_invalid_version_raises_error(self):
+        with self.assertRaises(vc_errors.InvalidCollectionVersion):
+            self.col.delete_subtree((42, 'brr'))
+
+    @patch.object(pymongo.collection.Collection, 'delete_many')
+    @patch.object(pymongo.collection.Collection, 'find_one_and_update')
+    def test_delete_subtree_on_leaf_removes_the_leaf(
+        self,
+        find_one_and_replace_mock,
+        delete_many_mock,
+
+    ):
+        version, branch = 0, 'b2'
+
+        num_nodes = len(self.col.log_tree)
+        self.col.delete_subtree((version, branch))
+
+        # in memory representation
+        self.assertEqual(num_nodes - 1, len(self.col.log_tree))
+
+        parent_version_tree_identifier = hashabledict(
+            {'version': 1, 'branch': 'main'}
+        )
+        children = self.col.log_tree.children(parent_version_tree_identifier)
+        self.assertEqual({
+            self.named_versions_to_id['v2_main'],
+            self.named_versions_to_id['v0_b3']
+        },
+            {c.tag for c in children}
+        )
+
+        delete_many_mock.assert_called_once_with(
+            {"$or": [{'version': version, 'branch': branch}]}
+        )
+        find_one_and_replace_mock.assert_called_once_with(
+            filter={'_id': self.named_versions_to_id['v1_main']},
+            update={
+                "$set": {
+                    "next": [
+                        self.named_versions_to_id['v2_main'],
+                        self.named_versions_to_id['v0_b3'],
+                    ]}
+            },
+        )
+
+    def test_delete_subtree(self):
+        self.col.delete_subtree((1, 'main'))
+
+        self.assertEqual(2, len(self.col.log_tree))
+
+        children = self.col.log_tree.children(self.col.log_tree.root)
+        self.assertEqual(
+            {self.named_versions_to_id['v0_b1']},
+            {c.tag for c in children}
+        )
+
+        nodes = list(self.col.find({}))
+        self.assertEqual(2, len(nodes))
+
+        nodes = {n['_id']: n for n in nodes}
+        self.assertEqual({
+            self.named_versions_to_id['v0_main'],
+            self.named_versions_to_id['v0_b1']
+        },
+            set(nodes.keys())
+        )
+
+        self.assertEqual(
+            [self.named_versions_to_id['v0_b1']],
+            nodes[self.named_versions_to_id['v0_main']]['next']
+        )
+
+    def test_add_log_entry_raises_error_if_prev_version_does_not_exist(self):
+        with self.assertRaises(vc_errors.InvalidCollectionVersion):
+            self.col.add_log_entry(
+                previous_version=1,
+                previous_branch='b1',
+                current_branch='b1',
+                message='this will not be recorded',
+                timestamp=datetime.datetime.utcnow()
+            )
+
+    @patch.object(pymongo.collection.Collection, 'insert_one')
+    @patch.object(pymongo.collection.Collection, 'find_one_and_update')
+    def test_add_version_on_a_new_branch(
+        self,
+        find_one_and_replace_mock,
+        insert_one_mock,
+    ):
+        args = dict(
+            previous_version=0,
+            previous_branch='main',
+            current_branch='b5',
+            message='first version on b5',
+            timestamp=datetime.datetime.utcnow(),
+            with_id=ObjectId()
+        )
+        inserted_result_mock = MagicMock()
+        inserted_result_mock.inserted_id = args['with_id']
+
+        insert_one_mock.return_value = inserted_result_mock
+        self.col.add_log_entry(**args)
+        insert_one_mock.assert_called_once()
+        find_one_and_replace_mock.assert_called_once()
+
+        # something was added
+        n_entries = len(self.log_entries)
+        self.assertEqual(n_entries + 1, len(self.col.log_tree))
+
+        # the version was added in the correct place
+        children = self.col.log_tree.children(self.col.log_tree.root)
+        self.assertEqual(3, len(children))
+        self.assertIn(args['with_id'], {c.tag for c in children})
+
+    @patch.object(pymongo.collection.Collection, 'insert_one')
+    @patch.object(pymongo.collection.Collection, 'find_one_and_update')
+    def test_add_root_version(
+        self,
+        find_one_and_replace_mock,
+        insert_one_mock,
+    ):
+        self.col.reset()
+
+        args = dict(
+            previous_version=-1,
+            previous_branch=None,
+            current_branch='main',
+            message='root',
+            timestamp=datetime.datetime.utcnow(),
+            with_id=ObjectId()
+        )
+
+        inserted_result_mock = MagicMock()
+        inserted_result_mock.inserted_id = args['with_id']
+        insert_one_mock.return_value = inserted_result_mock
+
+        self.col.add_log_entry(**args)
+
+        find_one_and_replace_mock.assert_not_called()
+
+        insert_one_mock.assert_called_once_with({
+            '_id': args['with_id'],
+            'version': 0,
+            'branch': args['current_branch'],
+            'message': args['message'],
+            'timestamp': args['timestamp'],
+            'prev': None,
+            'next': []
+        })
+
+    @patch.object(pymongo.collection.Collection, 'insert_one')
+    def test_add_log_entry_with_on_the_same_branch(self, insert_one_mock):
+        args = dict(
+            previous_version=0,
+            previous_branch=None,
+            current_branch='b4',
+            message='a version',
+            timestamp=datetime.datetime.utcnow(),
+            with_id=ObjectId()
+        )
+        inserted_result_mock = MagicMock()
+        inserted_result_mock.inserted_id = args['with_id']
+        insert_one_mock.return_value = inserted_result_mock
+        self.col.add_log_entry(**args)
+
+        insert_one_mock.assert_called_once_with({
+            '_id': args['with_id'],
+            'version': 1,
+            'branch': args['current_branch'],
+            'message': args['message'],
+            'timestamp': args['timestamp'],
+            'prev': self.named_versions_to_id['v0_b4'],
+            'next': []
+        })

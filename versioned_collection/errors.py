@@ -24,9 +24,7 @@ class InvalidCollectionVersion(Exception):
     """Raised when trying to check out to a wrong collection version."""
 
     __DEFAULT_MESSAGE = (
-        "You tried to checkout to an nonexistent version of the target tracked "
-        "collection. The version identified by (version_id: {}, branch: {}) "
-        "does not exist."
+        "Version (version: {}, branch: {}) does not exist in the version tree."
     )
 
     def __init__(
