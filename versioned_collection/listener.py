@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 
 from bson import ObjectId
 from pymongo import MongoClient
+from pymongo.change_stream import CollectionChangeStream
 
 from versioned_collection.collection.tracking_collections import (
     ModifiedCollection,
@@ -188,60 +189,86 @@ class CollectionListener:
             parent_collection_name=collection_name,
         )
 
-        timestamp = None
-        docs = []
-        batch_size = 100
         with target_collection.watch() as change_stream:
             listening.value = True
-            for change in change_stream:
-                with lock:
-                    # The timestamp is sent only once by the parent process
-                    # before terminating the process
-                    try:
-                        timestamp = last_timestamp.get(block=False)
-                    except queue.Empty:
-                        pass
+            try:
+                CollectionListener.__listen(
+                    change_stream=change_stream,
+                    output_collection=_output_collection,
+                    listening=listening,
+                    heartbeat_q=heartbeat_q,
+                    last_timestamp=last_timestamp,
+                    lock=lock,
+                )
+            except KeyboardInterrupt:
+                # Gracefully exit. The synchronisation with the main process is
+                # done in :meth:`stop`.
+                pass
 
-                    # Process all changes that happened before the time the
-                    # stop listening 'signal' was sent. This allows properly
-                    # processing the pending changes that queued before being
-                    # streamed through the change stream by mongo.
-                    if timestamp is not None:
-                        change_time = change['clusterTime'].as_datetime()
-                        change_time = change_time.replace(tzinfo=None)
-                        if change_time > timestamp:
-                            # stop listening
-                            if len(docs):
-                                _output_collection.insert_many(docs)
-                                docs = []
-                            break
+    @staticmethod
+    def __listen(
+        change_stream: CollectionChangeStream,
+        output_collection: ModifiedCollection,
+        listening: Value,
+        heartbeat_q: Queue,
+        last_timestamp: Queue,
+        lock: Lock
+    ) -> None:
 
-                    # Send heartbeats to the parent process to signal that
-                    # this process is still processing the pending changes.
-                    if not listening.value:
-                        heartbeat_q.put(0)
+        docs = []
+        timestamp = None
+        batch_size = 100
 
-                    try:
-                        document_id = change["documentKey"]['_id']
-                        op_type = change["operationType"][0]
-                        if op_type == 'r':
-                            op_type = 'u'
-                        # Manually generate ids to keep the order of the events
-                        # and allow parallel insertion in database
-                        docs.append({
-                            '_id': ObjectId(),
-                            'id': document_id,
-                            'op': op_type,
-                        })
-                        if (
-                            not change_stream._cursor._has_next()  # noqa
-                            or len(docs) > batch_size  # noqa
-                        ):
-                            _output_collection.insert_many(docs)
+        for change in change_stream:
+            with lock:
+                # The timestamp is sent only once by the parent process
+                # before terminating the process
+                try:
+                    timestamp = last_timestamp.get(block=False)
+                except queue.Empty:
+                    pass
+
+                # Process all changes that happened before the time the
+                # stop listening 'signal' was sent. This allows properly
+                # processing the pending changes that queued before being
+                # streamed through the change stream by mongo.
+                if timestamp is not None:
+                    change_time = change['clusterTime'].as_datetime()
+                    change_time = change_time.replace(tzinfo=None)
+                    if change_time > timestamp:
+                        # stop listening
+                        if len(docs):
+                            output_collection.insert_many(docs)
                             docs = []
-                    except KeyError:
-                        # not really needed, but just in case the change stream
-                        # hangs
                         break
+
+                # Send heartbeats to the parent process to signal that
+                # this process is still processing the pending changes.
+                if not listening.value:
+                    heartbeat_q.put(0)
+
+                try:
+                    document_id = change["documentKey"]['_id']
+                    op_type = change["operationType"][0]
+                    if op_type == 'r':
+                        op_type = 'u'
+                    # Manually generate ids to keep the order of the events
+                    # and allow parallel insertion in database
+                    docs.append({
+                        '_id': ObjectId(),
+                        'id': document_id,
+                        'op': op_type,
+                    })
+                    if (
+                        not change_stream._cursor._has_next()  # noqa
+                        or len(docs) > batch_size  # noqa
+                    ):
+                        output_collection.insert_many(docs)
+                        docs = []
+                except KeyError:
+                    # not really needed, but just in case the change stream
+                    # hangs
+                    break
+
         if len(docs) > 0:
-            _output_collection.insert_many(docs)
+            output_collection.insert_many(docs)
