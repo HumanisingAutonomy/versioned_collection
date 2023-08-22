@@ -1,8 +1,8 @@
 name: Tests
 on:
   pull_request:
-    branches: [ main ]
-    types: [ opened, reopened, synchronize, closed ]
+    branches: [main]
+    types: [opened, reopened, synchronize, closed]
 
 permissions:
   id-token: write
@@ -12,7 +12,6 @@ permissions:
 
 env:
   PYTHON_VERSION: 3.8
-
 
 concurrency:
   group: ${{ github.ref }}-tests
@@ -64,7 +63,7 @@ jobs:
           if [[ "$result" != "$expected" ]]; then
             exit 1
           fi
-          
+
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.8.0
         with:
@@ -124,9 +123,11 @@ jobs:
           pip install nox
           nox -s docs
 
-
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
     needs: run-tests
     if: ${{(github.event.pull_request.merged == true) && (github.base_ref == 'main') }}
     steps:
@@ -163,23 +164,25 @@ jobs:
           pip -v install -e .
           pip install twine
 
-#      - uses: aws-actions/configure-aws-credentials@v2
-#        with:
-#          aws-region: eu-west-2
-#          role-to-assume: ${{ secrets.AWS_ROLE_BUILD }}
-#          role-session-name: build_versioned_collection
-#
-#      - name: Build and publish
-#        run: |
-#          aws codeartifact login --tool twine --domain humanising --repository research
-#          python -m build --wheel
-#          twine upload -r codeartifact dist/*
+      #      - uses: aws-actions/configure-aws-credentials@v2
+      #        with:
+      #          aws-region: eu-west-2
+      #          role-to-assume: ${{ secrets.AWS_ROLE_BUILD }}
+      #          role-session-name: build_versioned_collection
+      #
+      #      - name: Build and publish
+      #        run: |
+      #          aws codeartifact login --tool twine --domain humanising --repository research
+      #          python -m build --wheel
+      #          twine upload -r codeartifact dist/*
 
+      - name: Generate Cloudsmith Token
+        uses: HumanisingAutonomy/ha-foundation-github-actions/generate_cloudsmith_token@v1.22
       - name: Authenticate with Cloudsmith
         uses: HumanisingAutonomy/ha-foundation-python/github_actions/configure_python_download_cloudsmith_credentials@v0.4.2
         with:
           username: sandbox-bot
-          password: ${{secrets.CLOUDSMITH_SANDBOX_BOT_API_KEY}}
+          password: ${{env.CLOUDSMITH_API_KEY}}
           organisation: humanising-autonomy
           repository_name: ha-sandbox
 
@@ -189,12 +192,12 @@ jobs:
           organisation: humanising-autonomy
           repository_name: ha-sandbox
           username: sandbox-bot
-          password: ${{secrets.CLOUDSMITH_SANDBOX_BOT_API_KEY}}
+          password: ${{env.CLOUDSMITH_API_KEY}}
 
       - name: Build (Twine)
         run: python -m build --wheel
 
       - name: Publish (Twine)
         env:
-          TWINE_PASSWORD: ${{secrets.CLOUDSMITH_SANDBOX_BOT_API_KEY}}
+          TWINE_PASSWORD: ${{env.CLOUDSMITH_API_KEY}}
         run: twine upload -r ha-sandbox dist/*
