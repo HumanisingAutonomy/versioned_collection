@@ -372,8 +372,8 @@ class LogsCollection(_BaseTrackerCollection):
         while src != dst:
             path.append((src.identifier, -1))
             src = self._log_tree.parent(src.identifier)
-            # The order here also takes case to add the root of the subtree
-            # rooted in the LCA.
+            # The order here also takes care to add the root of the subtree
+            # rooted at the LCA.
             dst = self._log_tree.parent(dst.identifier)
             _path_dst.insert(0, (dst.identifier, 1))
 
@@ -388,7 +388,7 @@ class LogsCollection(_BaseTrackerCollection):
 
             sgn = 1
             if len(_path_dst) > 1:
-                # In this case `src` and `dst` are on different branches,
+                # In this case, `src` and `dst` are on different branches,
                 # joined by a branching node. For any possible path between
                 # `src` and `dst` in this case, the direction at the
                 # branching node should be 1, so fix it
@@ -666,12 +666,18 @@ class LogsCollection(_BaseTrackerCollection):
     def rebranch(self, version: Tuple[int, str], new_branch: str) -> None:
         """Move the versions starting at `version` to a new branch.
 
-        This only updates the `branch` field of the log entries to be
+        This updates the `branch` field of the log entries to be
         `new_branch` and resets the `version` counter field for `version`.
 
-        :param version: The versions at which the enw branch should start.
+        :raises ValueError: If `version` is the root version.
+
+        :param version: The versions at which the new branch should start.
         :param new_branch: The name of the new branch.
         """
+
+        if version == (0, "main"):
+            raise ValueError("Cannot rebranch the root of the version tree.")
+
         node: Node = self._log_tree.parent(
             self._get_log_tree_identifier(*version)
         )

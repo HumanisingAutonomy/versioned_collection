@@ -1,8 +1,9 @@
 import datetime
+from collections import OrderedDict
 from copy import deepcopy
 from typing import List, Dict, Any
 from unittest import TestCase
-from unittest.mock import patch, PropertyMock, MagicMock
+from unittest.mock import patch, MagicMock
 
 import pymongo.collection
 from bson import ObjectId
@@ -85,7 +86,7 @@ class TestLogSchema(TestCase):
 class TestLogCollectionBasics(InMemoryDatabaseSetup):
     # mainly initialisation and collection building. the rest of the
     # functionality is tested separately to avoid duplication wrt setting up
-    # and clearning the database
+    # and cleaning the database
 
     _parent_col_name = 'col'
 
@@ -203,7 +204,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
         )
         self._initialise_database([e1, e2])
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             vc_errors.InvalidCollectionState,
             'parent does not exist'
         ):
@@ -222,7 +223,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
         )
         self._initialise_database([entry])
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             vc_errors.InvalidCollectionState,
             'No root entry'
         ):
@@ -849,3 +850,105 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             'prev': self.named_versions_to_id['v0_b4'],
             'next': []
         })
+
+    def test_get_path_between_non_existing_versions(self):
+        # invalid source
+        with self.assertRaises(vc_errors.InvalidCollectionVersion):
+            self.col.get_path_between_versions((0, 'other'), (2, 'main'))
+
+        # invalid target
+        with self.assertRaises(vc_errors.InvalidCollectionVersion):
+            self.col.get_path_between_versions((2, 'main'), (2, 'brr'))
+
+        # invalid source and target
+        with self.assertRaises(vc_errors.InvalidCollectionVersion):
+            self.col.get_path_between_versions((0, 'other'), (2, 'brrrr'))
+
+    def test_path_between_a_version_and_itself_is_empty(self):
+        path = self.col.get_path_between_versions((1, 'main'), (1, 'main'))
+        self.assertEqual(0, len(path))
+
+    def _assertOrderedEqual(self, d1, d2):
+        d1 = OrderedDict(d1)
+        d2 = OrderedDict(d2)
+        self.assertEqual(d1, d2)
+
+    def test_get_path_between_versions_linear(self):
+        # forward
+        self._assertOrderedEqual(
+            {(0, 'main'): 1, (1, 'main'): 1, (2, 'main'): 1},
+            self.col.get_path_between_versions((0, 'main'), (2, 'main'))
+        )
+
+        # reverse
+        self._assertOrderedEqual(
+            {(2, 'main'): -1, (1, 'main'): -1, (0, 'main'): -1},
+            self.col.get_path_between_versions((2, 'main'), (0, 'main'))
+        )
+
+        # path of length 1
+        self._assertOrderedEqual(
+            {(0, 'b3'): -1, (1, 'main'): -1},
+            self.col.get_path_between_versions((0, 'b3'), (1, 'main'))
+        )
+
+    def test_get_path_between_version_same_level(self):
+        self._assertOrderedEqual(
+            {(2, 'main'): -1, (1, 'main'): 1, (0, 'b3'): 1},
+            self.col.get_path_between_versions((2, 'main'), (0, 'b3'))
+        )
+
+    def test_get_path_between_versions(self):
+        self._assertOrderedEqual(
+            {(2, 'main'): -1, (1, 'main'): 1, (0, 'b3'): 1, (0, 'b4'): 1},
+            self.col.get_path_between_versions((2, 'main'), (0, 'b4'))
+        )
+        self._assertOrderedEqual(
+            {(0, 'b4'): -1, (0, 'b3'): -1, (1, 'main'): 1, (2, 'main'): 1},
+            self.col.get_path_between_versions((0, 'b4'), (2, 'main'))
+        )
+
+    def test_rebranch_root_of_the_tree_raises_error(self):
+        with self.assertRaises(ValueError):
+            self.col.rebranch((0, 'main'), 'main_v2')
+
+    def test_rebranch_leaf_with_one_version_per_branch(self):
+        self.col.rebranch((0, 'b1'), 'new')
+        old_version = hashabledict({'version': 0, 'branch': 'b1'})
+        self.assertIsNone(self.col._log_tree.get_node(old_version))
+
+        new_version = hashabledict({'version': 0, 'branch': 'new'})
+        node = self.col._log_tree.get_node(new_version)
+        self.assertEqual(node.data.branch, 'new')
+        self.assertEqual(
+            node.data.prev,
+            self.named_versions_to_id['v0_main']
+        )
+
+    def test_rebranch_subtree(self):
+        self.col.rebranch((0, 'b3'), 'new')
+        node = self.col._log_tree.get_node(hashabledict(
+            {'version': 0, 'branch': 'new'}
+        ))
+        self.assertEqual(node.data.branch, 'new')
+        self.assertEqual(
+            node.data.prev,
+            self.named_versions_to_id['v1_main']
+        )
+
+        c1, c2 = self.col._log_tree.children(node.identifier)
+
+        children = dict()
+        if c1.data.branch == 'new':
+            children['new'] = c1
+            children['b4'] = c2
+        else:
+            children['new'] = c2
+            children['b4'] = c1
+
+        self.assertEqual(children['new'].data.branch, 'new')
+        self.assertEqual(children['new'].data.version, 1)
+        self.assertEqual(
+            children['new'].data.prev,
+            self.named_versions_to_id['v0_b3']
+        )
