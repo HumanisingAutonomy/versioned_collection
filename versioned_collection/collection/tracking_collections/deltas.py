@@ -147,7 +147,7 @@ class DeltasCollection(_BaseTrackerCollection):
             if _id not in deltas:
                 continue
             _delta = deltas[_id]
-            # This allows to build partial trees
+            # This allows building partial trees
             parent = _delta.prev if _delta.prev in deltas else None
             tree.create_node(identifier=_id, parent=parent, data=_delta)
             to_visit.extend(_delta.next)
@@ -179,15 +179,14 @@ class DeltasCollection(_BaseTrackerCollection):
         :param branch: The branch that the modified target document belongs to.
         :param timestamp: The date and time when the delta was registered.
         :param branch_history: A set containing (version, branch) tuples
-            from the current version (the version that is about to be
-            registered) to the root of the version tree.
+            from the previous version to the root of the version tree.
         :param with_id: An optional :class:`ObjectId` used for inserting the
             new entry into this collection. This is used when adding deltas
             from a local to a remote collection.
         :return: The id of the delta document, or ``None`` if the two versions
             of the document are unchanged.
         """
-        forward_diff = DeepDiff(
+        forward = DeepDiff(
             document_old,
             document_new,
             ignore_order=False,
@@ -197,13 +196,15 @@ class DeltasCollection(_BaseTrackerCollection):
         # No changes actually made since the previous registered version.
         # This can be caused by updating the document once, and then updating
         # it again to its previous version.
-        if forward_diff == {}:
+        if forward == {}:
             return None
+
+        forward = Delta(forward)
 
         # Search the per-document delta tree for a previous delta
 
         # Get the set of deltas
-        deltas = list(self.find({'document_id': document_id}))
+        deltas = self.find({'document_id': document_id})
 
         # Keep only the deltas that are part of the branch history
         _hist_set = set(branch_history)
@@ -221,11 +222,15 @@ class DeltasCollection(_BaseTrackerCollection):
 
         # Force a delta recompute in the case a delta has already been
         # registered during this transaction
+        # This should not happen because the tracking documents are grouped
+        # by the document's ID. However, it is possible that the listener
+        # hasn't finished marking all documents as modified by the time they are
+        # extracted from 'modified documents' collection.
         update_forward_and_backward_deltas = False
         delta_doc_id = None
 
         # If the document has been modified before, find the previous delta
-        # that modified the document on the current logical path from root to
+        # that modified the document on the current path from root to
         # the current node in the version tree.
         if len(deltas) > 0:
             # Build the delta tree for this document
@@ -250,76 +255,38 @@ class DeltasCollection(_BaseTrackerCollection):
             ):
                 branch_history.pop(-1)
 
-            if len(branch_history) == 0:
-                if (
-                    self._version_of(next_node) == (collection_version, branch)
-                    and len(deltas) == 1
-                ):
-                    # This document has already been registered by the
-                    # current `register` operation and the document was
-                    # modified for the first time during this register
-                    # transaction. Check if the document has changed since
-                    # the last time it was registered by comparing the
-                    # forward diffs.
-                    old_forward_diff = Delta(
-                        next_node.data['forward'],
-                        safe_to_import=self._SAFE_TO_IMPORT,
-                    ).diff
-                    if forward_diff == old_forward_diff:
-                        # The document has not changed, but it was simply
-                        # modified multiple times before registering the new
-                        # version.
-                        return next_node.identifier
-                    else:
-                        update_forward_and_backward_deltas = True
-                        delta_doc_id = next_node.identifier
-                else:
-                    curr_collection_version = (
-                        0 if collection_version < 0 else collection_version - 1
-                    )
-                    raise InvalidCollectionState(
-                        f"\nCould not identify the previous delta for the "
-                        f"current collection state and the given list "
-                        f"of branch histories."
-                        f"\ncollection_version: {curr_collection_version}\n"
-                        f"branch: {branch}\n"
-                        f"document_id: {document_id}\n"
-                        f"timestamp: {timestamp}"
-                    )
-            # If a fresh delta has to be added, find its parent.
-            # Ignore if just a delta's diffs recompute is required.
-            if not update_forward_and_backward_deltas:
-                # Use the reversed history to descend from root to the latest
-                # delta that modified the document
-                branch_history.insert(0, (collection_version, branch))
-                while (
-                    len(branch_history) > 1
-                    and self._version_of(next_node) == branch_history[-1]
-                ):
-                    branch_history.pop(-1)
-                    for child in tree.children(next_node.identifier):
-                        if self._version_of(child) == branch_history[-1]:
-                            next_node = child
+            # Use the reversed history to descend from root to the latest
+            # delta that modified the document
+            branch_history.insert(0, (collection_version, branch))
+            while (
+                len(branch_history) > 1
+                and self._version_of(next_node) == branch_history[-1]
+            ):
+                branch_history.pop(-1)
+                for child in tree.children(next_node.identifier):
+                    if self._version_of(child) == branch_history[-1]:
+                        next_node = child
 
-                if self._version_of(next_node) == (collection_version, branch):
-                    old_forward_diff = Delta(
-                        next_node.data['forward'],
-                        safe_to_import=self._SAFE_TO_IMPORT,
-                    ).diff
-                    if forward_diff == old_forward_diff:
-                        # The document has not changed, but it was simply
-                        # modified multiple times before registering the new
-                        # version.
-                        return next_node.identifier
-                    else:
-                        update_forward_and_backward_deltas = True
-                        delta_doc_id = next_node.identifier
+            if self._version_of(next_node) == (collection_version, branch):
+                old_forward_diff = Delta(
+                    next_node.data['forward'],
+                    safe_to_import=self._SAFE_TO_IMPORT,
+                ).diff
+                if forward.diff == old_forward_diff:
+                    # TODO: log here to make sure this doesn't happen
+                    #  under stress tests, then remove
+                    # The document has not changed, but it was simply
+                    # modified multiple times before registering the new
+                    # version.
+                    return next_node.identifier
                 else:
-                    prev_delta_node = next_node
-                    prev_delta_doc = next_node.data.__dict__
-                    prev_delta_doc['_id'] = next_node.identifier
+                    update_forward_and_backward_deltas = True
+                    delta_doc_id = next_node.identifier
+            else:
+                prev_delta_node = next_node
+                prev_delta_doc = next_node.data.__dict__
+                prev_delta_doc['_id'] = next_node.identifier
 
-        forward = Delta(forward_diff)
         backward = Delta(
             DeepDiff(
                 document_new,
@@ -371,7 +338,7 @@ class DeltasCollection(_BaseTrackerCollection):
         """Insert a list of delta documents into this collection.
 
         .. warning::
-            This method modified the delta documents and removes the ids of
+            This method modifies the delta documents and removes the ids of
             the documents from the ``next`` field that are not part of the
             given `delta_docs` list.
 
@@ -462,12 +429,12 @@ class DeltasCollection(_BaseTrackerCollection):
             t for t in trees if self._version_of(t.get_node(t.root)) in path
         ]
 
-        # If after filtering the out-of-path trees we are left with a single
+        # If after filtering the out-of-path trees, we are left with a single
         # tree, then this tree is sufficient to recover the correct deltas.
         if len(trees) == 1:
             return trees[0]
 
-        # At this point we can only have 2 unconnected trees that are part of
+        # At this point, we can only have 2 unconnected trees that are part of
         # different branches in the version tree.
         # Proof:
         #   Suppose the 2 trees are part of the same branch. Since none of
@@ -478,7 +445,7 @@ class DeltasCollection(_BaseTrackerCollection):
         #   transform the document between the end points of the path,
         #   therefore there exists a unique delta tree -> contradiction.
         #   If the path is a linear chain (has no change in
-        #   direction) then there exist a unique tree since the path is
+        #   direction), then there exists a unique tree since the path is
         #   contained within a single branch. Otherwise, the path is split
         #   between two branches and there exists a delta tree for each
         #   branch, so 2 trees.

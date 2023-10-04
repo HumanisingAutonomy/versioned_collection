@@ -1,3 +1,4 @@
+from time import sleep
 from typing import List
 from unittest import TestCase
 
@@ -5,12 +6,25 @@ from pymongo import MongoClient
 
 from versioned_collection import VersionedCollection
 
+# There's something weird going on when running the whole suite,
+# causing some tests to randomly fail, while running the tests individually
+# always works, so it's super hard to debug.
+# This may be caused by the mongo change stream and the listener. Probably it
+# takes some time for the change streams to warm up and building and
+# destroying the collection after each test causes it.
+SLEEP_TIME = 0.12
+
 
 class User(VersionedCollection):
     SCHEMA = {'name': str, 'emails': List[str]}
 
+    def register(self, *args, **kwargs) -> bool:
+        sleep(SLEEP_TIME)
+        return super().register(*args, **kwargs)
 
-SLEEP_TIME = 0.12
+    def diff(self, *args, **kwargs):
+        sleep(SLEEP_TIME)
+        return super().diff(*args, **kwargs)
 
 
 class _BaseTest(TestCase):

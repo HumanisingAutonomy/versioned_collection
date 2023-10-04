@@ -1,6 +1,4 @@
-from time import sleep
-
-from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME
+from tests.test_versioned_collection.common import _BaseTest
 from versioned_collection.errors import (
     InvalidOperation,
     InvalidCollectionVersion,
@@ -37,7 +35,6 @@ class TestVersionedCollectionCheckout(_BaseTest):
     def test_checkout_on_invalid_state_raises_error(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
 
         self.user_collection.register('v1')
         self.user_collection._deltas_collection.drop()
@@ -51,7 +48,6 @@ class TestVersionedCollectionCheckout(_BaseTest):
 
         # v1
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
         self.user_collection.register('v1')
 
         # v2
@@ -59,7 +55,6 @@ class TestVersionedCollectionCheckout(_BaseTest):
         self.user_collection.find_one_and_update(
             {'name': 'Goethe'}, {'$set': {'book': 'Faust'}}
         )
-        sleep(SLEEP_TIME)
 
         self.user_collection.register('v2')
 

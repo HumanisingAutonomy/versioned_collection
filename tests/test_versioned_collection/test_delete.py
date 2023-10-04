@@ -1,6 +1,5 @@
-from time import sleep
 
-from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME
+from tests.test_versioned_collection.common import _BaseTest
 
 
 class TestVersionedCollectionDeleteSubtree(_BaseTest):
@@ -21,7 +20,6 @@ class TestVersionedCollectionDeleteSubtree(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.user_collection.init('v0')
         self.user_collection.insert_one(self.DOCUMENT2)
-        sleep(SLEEP_TIME)
         self.assertTrue(self.user_collection.register('v1'))
         self.assertEqual(2, len(self.user_collection.get_log()))
         self.assertEqual(2, self.user_collection.count_documents({}))
@@ -36,16 +34,13 @@ class TestVersionedCollectionDeleteSubtree(_BaseTest):
     def _build_structure(self):
         self.user_collection.init('v0')
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
         self.user_collection.register('v1')
         self.user_collection.create_branch('branch')
         self.user_collection.insert_one(self.DOCUMENT2)
-        sleep(SLEEP_TIME)
         self.user_collection.register('v0_branch')
         self.user_collection.update_one(
             {'_id': self.DOCUMENT['_id']}, {"$set": {'height': None}}
         )
-        sleep(SLEEP_TIME)
         self.user_collection.register('v1_branch')
 
     def test_delete_a_whole_branch(self):
@@ -67,7 +62,6 @@ class TestVersionedCollectionDeleteSubtree(_BaseTest):
         self.user_collection.checkout(0)
         self.user_collection.create_branch('other_branch')
         self.user_collection.delete_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
         self.assertTrue(self.user_collection.register('v0_other_branch'))
 
         self.user_collection.checkout(1, 'main')
@@ -79,7 +73,6 @@ class TestVersionedCollectionDeleteSubtree(_BaseTest):
     def test_deleting_next_versions_on_branch_reattaches_the_head(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
         self.assertTrue(self.user_collection.register('v1'))
         self.user_collection.checkout(0)
         self.assertTrue(self.user_collection.is_detached())
@@ -90,11 +83,9 @@ class TestVersionedCollectionDeleteSubtree(_BaseTest):
     def test_delete_called_from_empty_branch(self):
         self.user_collection.init('v0_m')
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
         self.assertTrue(self.user_collection.register('v1_m'))
         self.assertTrue(self.user_collection.checkout(0))
         self.user_collection.insert_one(self.DOCUMENT2)
-        sleep(SLEEP_TIME)
         self.user_collection.register('v0_b', branch_name='b')
         self.user_collection.checkout(branch='main')
         self.user_collection.create_branch('empty')

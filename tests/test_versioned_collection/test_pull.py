@@ -1,7 +1,6 @@
 from copy import deepcopy
-from time import sleep
 
-from tests.test_versioned_collection.common import SLEEP_TIME, _RemoteBaseTest
+from tests.test_versioned_collection.common import _RemoteBaseTest
 from versioned_collection.errors import (
     InvalidOperation,
     InvalidCollectionState,
@@ -98,7 +97,6 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
 
         self.local.create_branch('other')
         self.local.insert_one(self.DOCUMENT3)
-        sleep(SLEEP_TIME)
         with self.assertRaises(InvalidOperation):
             self.local.pull(self.remote, branch='main')
 
@@ -240,7 +238,6 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
             {'_id': self.DOCUMENT['_id']}, {"$set": {'remote_field': True}}
         )
         self.remote.insert_one(self.DOCUMENT3)
-        sleep(SLEEP_TIME)
         self.local.register('v1_local')
         self.remote.register('v1_remote')
 
@@ -265,7 +262,6 @@ class TestVersionedCollectionPull(_RemoteBaseTest):
         self.remote.update_one(
             {'_id': self.DOCUMENT2['_id']}, {"$set": {'conflicting_field': -1}}
         )
-        sleep(SLEEP_TIME)
         self.local.register('v1_local')
         self.remote.register('v1_remote')
 

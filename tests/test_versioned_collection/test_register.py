@@ -1,6 +1,4 @@
-from time import sleep
-
-from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME
+from tests.test_versioned_collection.common import _BaseTest
 
 
 class TestVersionedCollectionRegister(_BaseTest):
@@ -16,7 +14,7 @@ class TestVersionedCollectionRegister(_BaseTest):
     def test_registering_in_detached_head_mode_creates_a_new_branch(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
+        
         self.assertTrue(self.user_collection.register("v1"))
         self.user_collection.checkout(0)
         self.user_collection.insert_one(self.DOCUMENT2)
@@ -39,7 +37,6 @@ class TestVersionedCollectionRegister(_BaseTest):
     def test_registering_updates_the_replica(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)  # something funny happens when the whole suite is run
         self.user_collection.register("v1")
         coll_docs = list(self.user_collection.find({}))
         replica_docs = list(self.user_collection._replica_collection.find({}))
@@ -63,7 +60,7 @@ class TestVersionedCollectionRegister(_BaseTest):
         self.user_collection.update_one(
             {'name': self.DOCUMENT['name']}, {"$set": {'age': 99}}
         )
-        sleep(SLEEP_TIME)
+        
         self.user_collection.register('v1')
 
     def test_multiple_updates_to_doc_before_register_with_more_versions(self):
@@ -76,7 +73,7 @@ class TestVersionedCollectionRegister(_BaseTest):
         self.user_collection.update_one(
             {'name': self.DOCUMENT['name']}, {"$set": {'is_wizard': False}}
         )
-        sleep(SLEEP_TIME)
+        
         self.user_collection.register('v2')
 
     def test_multiple_updates_to_doc_before_register_with_more_versions2(self):
@@ -91,7 +88,7 @@ class TestVersionedCollectionRegister(_BaseTest):
         self.user_collection.update_one(
             {'name': self.DOCUMENT['name']}, {"$set": {'is_wizard': False}}
         )
-        sleep(SLEEP_TIME)
+        
         self.assertTrue(self.user_collection.register('v3'))
         self.assertEqual(
             3, self.user_collection._deltas_collection.count_documents({})
@@ -108,7 +105,7 @@ class TestVersionedCollectionRegister(_BaseTest):
         self.user_collection.update_one(
             {'_id': self.DOCUMENT['_id']}, {"$set": {'is_wizard': False}}
         )
-        sleep(SLEEP_TIME)
+        
         self.user_collection.register('b_v0')
         self.assertEqual(
             2, self.user_collection._deltas_collection.count_documents({})

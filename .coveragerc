@@ -24,6 +24,7 @@ exclude_lines =
     @(abc\.)?abstractmethod
     @overload
     if (typing\.)?TYPE_CHECKING:
+    else:  # never happens
 
 [html]
 directory = htmlcov

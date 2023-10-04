@@ -1,6 +1,5 @@
-from time import sleep
 
-from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME, User
+from tests.test_versioned_collection.common import _BaseTest, User
 from versioned_collection.errors import (
     CollectionAlreadyInitialised,
 )
@@ -43,7 +42,6 @@ class TestVersionedCollectionInit(_BaseTest):
         self.user_collection.init()
 
         _id = self.user_collection.insert_one(self.DOCUMENT).inserted_id
-        sleep(SLEEP_TIME)
         doc_id = self.user_collection._modified_collection.find_one({})['id']
         self.assertEqual(_id, doc_id)
 

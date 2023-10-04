@@ -1,5 +1,4 @@
 from copy import deepcopy
-from time import sleep
 
 from bson import ObjectId
 
@@ -26,7 +25,6 @@ class TestVersionedCollectionBranching(_BaseTest):
         self.user_collection.init()
 
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
         self.assertTrue(self.user_collection.register("v1"))
 
         self.user_collection.checkout(0)
@@ -91,7 +89,6 @@ class TestVersionedCollectionBranching(_BaseTest):
     def test_branching_when_registering_when_head_attached(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
         self.assertTrue(self.user_collection.register('added doc', 'other'))
 
         with self.assertRaises(BranchNotFound):

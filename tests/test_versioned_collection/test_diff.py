@@ -1,6 +1,5 @@
-from time import sleep
 
-from tests.test_versioned_collection.common import _BaseTest, SLEEP_TIME
+from tests.test_versioned_collection.common import _BaseTest
 from versioned_collection.errors import (
     InvalidCollectionVersion,
 )
@@ -37,7 +36,6 @@ class TestVersionedCollectionDiff(_BaseTest):
             {'name': 'Goethe'}, {"$set": {'name': 'GOETHE'}}
         )
         self.user_collection.delete_one({'name': 'Euler'})
-        sleep(SLEEP_TIME)
         diffs = self.user_collection.diff(deep=True)
         self.assertEqual(2, len(diffs))
         diffs = self.user_collection.diff(deep=False)
@@ -55,7 +53,6 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.update_one(
             {'name': 'Goethe'}, {"$set": {'name': 'GOETHE'}}
         )
-        sleep(SLEEP_TIME)
         diff = self.user_collection.diff(deep=True)[self.DOCUMENT['_id']]
         self.assertEqual(
             diff['values_changed']["root['name']"]['new_value'], "GOETHE"
@@ -74,7 +71,6 @@ class TestVersionedCollectionDiff(_BaseTest):
     def test_diffs_with_unregister_changes2(self):
         self.user_collection.init()
         self.user_collection.insert_one(self.DOCUMENT)
-        sleep(SLEEP_TIME)
 
         diffs = self.user_collection.diff(branch='main')
         self.assertEqual(1, len(diffs))
@@ -93,7 +89,6 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.insert_one(self.DOCUMENT)
         self.assertTrue(self.user_collection.register('v1'))
         self.user_collection.insert_one(self.DOCUMENT2)
-        sleep(SLEEP_TIME)
         diffs = self.user_collection.diff(0, 'main')
         self.assertEqual(2, len(diffs))
         diffs = self.user_collection.diff(0, 'main', deep=True)
@@ -105,7 +100,6 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.update_one(
             {'_id': self.DOCUMENT2['_id']}, {"$set": {'new_field': 'new_value'}}
         )
-        sleep(SLEEP_TIME)
 
         diffs = self.user_collection.diff(0, direction='to', deep=True)
         self.assertEqual(1, len(diffs))
@@ -120,7 +114,6 @@ class TestVersionedCollectionDiff(_BaseTest):
             {'_id': self.DOCUMENT['_id']}, {"$set": {'field_1': 'value_1'}}
         )
         self.user_collection.insert_one(self.DOCUMENT2)
-        sleep(SLEEP_TIME)
         self.user_collection.register('v1')
         self.user_collection.update_one(
             {'_id': self.DOCUMENT['_id']}, {"$set": {'field_2': 'value_2'}}
@@ -128,7 +121,6 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.update_one(
             {'_id': self.DOCUMENT2['_id']}, {"$set": {'field_1': 'value_1'}}
         )
-        sleep(SLEEP_TIME)
 
         diffs = self.user_collection.diff(0, direction='to', deep=True)
         self.assertEqual(2, len(diffs))
