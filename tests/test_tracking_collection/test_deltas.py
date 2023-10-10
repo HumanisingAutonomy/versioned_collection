@@ -13,6 +13,24 @@ from versioned_collection.collection.tracking_collections import \
     DeltasCollection
 
 
+def _get_timestamp():
+    # bson stores date times up to millisecond precision, so chop of the
+    # nanoseconds
+    timestamp = datetime.datetime.utcnow()
+    timestamp = datetime.datetime.fromisoformat(
+        timestamp.isoformat(timespec='milliseconds')
+    )
+    return timestamp
+
+
+def _update_doc(doc, _id=None):
+    doc = deepcopy(doc)
+    doc['v'] += 1
+    if _id is not None:
+        doc['_id'] = _id
+    return doc
+
+
 class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
 
     def setUp(self) -> None:
@@ -49,12 +67,8 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
         self.assertIsNone(delta_id)
 
     def test_add_delta_for_the_first_time(self):
-        # bson stores date times up to millisecond precision, so chop of the
-        # nanoseconds
-        timestamp = datetime.datetime.utcnow()
-        timestamp = datetime.datetime.fromisoformat(
-            timestamp.isoformat(timespec='milliseconds')
-        )
+        
+        timestamp = _get_timestamp()
 
         delta_id = self.col.add_delta(
             document_new=self.doc,
@@ -91,20 +105,68 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
         self.assertEqual(self.doc + backward_delta, dict())
 
     def test_add_delta_with_existing_parent(self):
-        pass
+        first_delta_id = self.col.add_delta(
+            document_new=self.doc,
+            document_old=dict(),
+            document_id=self.doc['_id'],
+            collection_version=1,
+            branch='main',
+            timestamp=_get_timestamp(),
+            branch_history=[(0, 'main')]
+        )
 
-    def test_add_first_delta_on_a_new_branch(self):
-        pass
+        new_doc = _update_doc(self.doc)
+        second_delta_id = self.col.add_delta(
+            document_new=new_doc,
+            document_old=self.doc,
+            document_id=self.doc['_id'],
+            collection_version=2,
+            branch='main',
+            timestamp=_get_timestamp(),
+            branch_history=[(1, 'main'), (0, 'main')]
+        )
 
-    def test_add_delta_with_existing_parent_on_branch(self):
-        pass
+        parent_delta = self.col.find_one({'_id': first_delta_id})
+        self.assertEqual([second_delta_id], parent_delta['next'])
+
+        delta = self.col.find_one({'_id': second_delta_id})
+        self.assertEqual(second_delta_id, delta['_id'])
+        self.assertEqual(self.doc['_id'], delta['document_id'])
+        self.assertEqual(2, delta['collection_version_id'])
+        self.assertEqual('main', delta['branch'])
+        self.assertEqual(first_delta_id, delta['prev'])
+        self.assertEqual([], delta['next'])
 
     def test_add_delta_on_branch_with_unconnected_delta_tree(self):
         # add a document on 2 different branches such that for both branches,
         # the deltas are added after the version corresponding to the
         # intersection of the branches, i.e., the LCA corresponding to the
         # versions for which the deltas are registered.
-        pass
+        first_delta_id = self.col.add_delta(
+            document_new=self.doc,
+            document_old=dict(),
+            document_id=self.doc['_id'],
+            collection_version=2,
+            branch='main',
+            timestamp=_get_timestamp(),
+            branch_history=[(1, 'main'), (0, 'main')]
+        )
+
+        second_delta_id = self.col.add_delta(
+            document_new=self.doc,
+            document_old=dict(),
+            document_id=self.doc['_id'],
+            collection_version=0,
+            branch='branch',
+            timestamp=_get_timestamp(),
+            branch_history=[(0, 'branch'), (1, 'main'), (0, 'main')]
+        )
+
+        first_delta = self.col.find_one({'_id': first_delta_id})
+        self.assertIsNone(first_delta['prev'])
+
+        second_delta = self.col.find_one({'_id': second_delta_id})
+        self.assertIsNone(second_delta['prev'])
 
 
 class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
@@ -120,22 +182,6 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             'v': 0,
             'a_field': 'a_value'
         }
-
-    @staticmethod
-    def _get_timestamp():
-        timestamp = datetime.datetime.utcnow()
-        timestamp = datetime.datetime.fromisoformat(
-            timestamp.isoformat(timespec='milliseconds')
-        )
-        return timestamp
-
-    @staticmethod
-    def _update_doc(doc, _id=None):
-        doc = deepcopy(doc)
-        doc['v'] += 1
-        if _id is not None:
-            doc['_id'] = _id
-        return doc
 
     @staticmethod
     def _get_forward_backward_deltas(doc_old, doc_new):
@@ -171,7 +217,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         find_mock.return_value = []
 
         delta_id = ObjectId()
-        timestamp = self._get_timestamp()
+        timestamp = _get_timestamp()
         ret_delta_id = self.col.add_delta(
             document_new=self.doc,
             document_old=dict(),
@@ -204,16 +250,14 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         update_one_mock.assert_not_called()
         insert_one_mock.assert_called_once_with(delta_doc)
 
-    @patch.object(pymongo.collection.Collection, 'find')
-    @patch.object(pymongo.collection.Collection, 'update_one')
-    @patch.object(pymongo.collection.Collection, 'insert_one')
-    @patch.object(pymongo.collection.Collection, 'find_one_and_update')
-    def test_add_delta_with_existing_parent(
+    def _test_add_delta_with_existing_parent(
         self,
         find_one_and_update_mock,
         insert_one_mock,
         update_one_mock,
         find_mock,
+        child_version: int,
+        child_branch: str
     ):
         forward, backward = self._get_forward_backward_deltas(dict(), self.doc)
 
@@ -222,7 +266,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             document_id=self.doc['_id'],
             collection_version_id=1,
             branch='main',
-            timestamp=self._get_timestamp(),
+            timestamp=_get_timestamp(),
             forward=forward.dumps(),
             backward=backward.dumps(),
             prev=None,
@@ -231,16 +275,16 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         find_mock.return_value = [deepcopy(parent_delta)]
 
         doc_old = self.doc
-        doc_new = self._update_doc(doc_old)
+        doc_new = _update_doc(doc_old)
 
         delta_id = ObjectId()
-        timestamp = self._get_timestamp()
+        timestamp = _get_timestamp()
         ret_delta_id = self.col.add_delta(
             document_new=doc_new,
             document_old=doc_old,
             document_id=doc_new['_id'],
-            collection_version=2,
-            branch='main',
+            collection_version=child_version,
+            branch=child_branch,
             timestamp=timestamp,
             branch_history=[(1, 'main'), (0, 'main')],
             with_id=delta_id,
@@ -253,8 +297,8 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         delta_doc = dict(
             _id=delta_id,
             document_id=self.doc['_id'],
-            collection_version_id=2,
-            branch='main',
+            collection_version_id=child_version,
+            branch=child_branch,
             timestamp=timestamp,
             forward=forward.dumps(),
             backward=backward.dumps(),
@@ -266,6 +310,26 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         find_one_and_update_mock.assert_called_once_with(
             filter={'_id': parent_delta['_id']},
             update={"$set": {"next": [delta_id]}},
+        )
+
+    @patch.object(pymongo.collection.Collection, 'find')
+    @patch.object(pymongo.collection.Collection, 'update_one')
+    @patch.object(pymongo.collection.Collection, 'insert_one')
+    @patch.object(pymongo.collection.Collection, 'find_one_and_update')
+    def test_add_delta_with_existing_parent(
+        self,
+        find_one_and_update_mock,
+        insert_one_mock,
+        update_one_mock,
+        find_mock,
+    ):
+        self._test_add_delta_with_existing_parent(
+            find_one_and_update_mock,
+            insert_one_mock,
+            update_one_mock,
+            find_mock,
+            child_version=2,
+            child_branch='main'
         )
 
     @patch.object(pymongo.collection.Collection, 'find')
@@ -286,7 +350,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         # Remove this test after finding a permanent solution.
 
         forward, backward = self._get_forward_backward_deltas(dict(), self.doc)
-        timestamp = self._get_timestamp()
+        timestamp = _get_timestamp()
 
         first_delta = dict(
             _id=ObjectId(),
@@ -303,7 +367,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
 
         # not a new version, but a new update before registering the doc
         doc_old = dict()
-        doc_new = self._update_doc(self.doc)
+        doc_new = _update_doc(self.doc)
 
         delta_id = ObjectId()
         ret_delta_id = self.col.add_delta(
@@ -354,16 +418,16 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             document_id=self.doc['_id'],
             collection_version_id=1,
             branch='main',
-            timestamp=self._get_timestamp(),
+            timestamp=_get_timestamp(),
             forward=forward.dumps(),
             backward=backward.dumps(),
             prev=None,
             next=[first_delta_id],
         )
 
-        timestamp = self._get_timestamp()
+        timestamp = _get_timestamp()
         forward, backward = self._get_forward_backward_deltas(
-            self.doc, self._update_doc(self.doc)
+            self.doc, _update_doc(self.doc)
         )
         first_delta = dict(
             _id=first_delta_id,
@@ -380,7 +444,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         find_mock.return_value = [deepcopy(parent_delta), deepcopy(first_delta)]
 
         doc_old = self.doc
-        doc_new = self._update_doc(self._update_doc(self.doc))
+        doc_new = _update_doc(_update_doc(self.doc))
         delta_id = ObjectId()
         ret_delta_id = self.col.add_delta(
             document_new=doc_new,
@@ -411,15 +475,83 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             },
         )
 
-    def test_add_first_delta_on_a_new_branch(self):
-        pass
+    @patch.object(pymongo.collection.Collection, 'find')
+    @patch.object(pymongo.collection.Collection, 'update_one')
+    @patch.object(pymongo.collection.Collection, 'insert_one')
+    @patch.object(pymongo.collection.Collection, 'find_one_and_update')
+    def test_add_delta_with_existing_parent_on_a_branch(
+        self,
+        find_one_and_update_mock,
+        insert_one_mock,
+        update_one_mock,
+        find_mock,
+    ):
+        self._test_add_delta_with_existing_parent(
+            find_one_and_update_mock,
+            insert_one_mock,
+            update_one_mock,
+            find_mock,
+            child_version=0,
+            child_branch='branch'
+        )
 
-    def test_add_delta_with_existing_parent_on_branch(self):
-        pass
-
-    def test_add_delta_on_branch_with_unconnected_delta_tree(self):
+    @patch.object(pymongo.collection.Collection, 'find')
+    @patch.object(pymongo.collection.Collection, 'update_one')
+    @patch.object(pymongo.collection.Collection, 'insert_one')
+    @patch.object(pymongo.collection.Collection, 'find_one_and_update')
+    def test_add_delta_on_branch_with_unconnected_delta_tree(
+        self,
+        find_one_and_update_mock,
+        insert_one_mock,
+        update_one_mock,
+        find_mock,
+    ):
         # add a document on 2 different branches such that for both branches,
         # the deltas are added after the version corresponding to the
         # intersection of the branches, i.e., the LCA corresponding to the
         # versions for which the deltas are registered.
-        pass
+
+        forward, backward = self._get_forward_backward_deltas(dict(), self.doc)
+
+        other_delta = dict(
+            _id=ObjectId(),
+            document_id=self.doc['_id'],
+            collection_version_id=4,
+            branch='main',
+            timestamp=_get_timestamp(),
+            forward=forward.dumps(),
+            backward=backward.dumps(),
+            prev=None,
+            next=[],
+        )
+        find_mock.return_value = [deepcopy(other_delta)]
+
+        delta_id = ObjectId()
+        timestamp = _get_timestamp()
+        ret_delta_id = self.col.add_delta(
+            document_new=self.doc,
+            document_old=dict(),
+            document_id=self.doc['_id'],
+            collection_version=1,
+            branch='branch',
+            timestamp=timestamp,
+            branch_history=[(0, 'branch'), (1, 'main'), (0, 'main')],
+            with_id=delta_id,
+        )
+        self.assertEqual(delta_id, ret_delta_id)
+
+        update_one_mock.assert_not_called()
+        find_one_and_update_mock.assert_not_called()
+
+        delta_doc = dict(
+            _id=delta_id,
+            document_id=self.doc['_id'],
+            collection_version_id=1,
+            branch='branch',
+            timestamp=timestamp,
+            forward=forward.dumps(),
+            backward=backward.dumps(),
+            prev=None,
+            next=[],
+        )
+        insert_one_mock.assert_called_once_with(delta_doc)
