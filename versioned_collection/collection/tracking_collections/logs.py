@@ -336,6 +336,8 @@ class LogsCollection(_BaseTrackerCollection):
             version. The forward direction is represented as ``1``, and
             the backward direction as ``-1``. The last entry, representing the
             target version, has the direction of the previous step as direction.
+            If the two versions are on different branches with a common
+            ancestor, then the direction at that node is ``0``.
         """
 
         if current == target:
@@ -369,7 +371,9 @@ class LogsCollection(_BaseTrackerCollection):
             src = self._log_tree.parent(src.identifier)
 
         _path_dst = [(dst.identifier, 0)]
+        on_different_branches = False
         while src != dst:
+            on_different_branches = True
             path.append((src.identifier, -1))
             src = self._log_tree.parent(src.identifier)
             # The order here also takes care to add the root of the subtree
@@ -387,11 +391,13 @@ class LogsCollection(_BaseTrackerCollection):
             path = [((i['version'], i['branch']), -d) for (i, d) in path]
 
             sgn = 1
-            if len(_path_dst) > 1:
+            if on_different_branches:
                 # In this case, `src` and `dst` are on different branches,
                 # joined by a branching node. For any possible path between
                 # `src` and `dst` in this case, the direction at the
-                # branching node should be 1, so fix it
+                # branching node should be 1, so fix it.
+                # This is just temporary, to ensure the correct direction, and
+                # it needs to be set to 0 later on.
                 node_id, _ = path[len(_path_dst) - 1]
                 path[len(_path_dst) - 1] = node_id, 1
 
@@ -402,11 +408,19 @@ class LogsCollection(_BaseTrackerCollection):
             # Fix the direction at the beginning of the path after reversing
             path[0] = ((path[0][0][0], path[0][0][1]), sgn * path[-1][1])
 
+            if on_different_branches:
+                node_id, _ = path[len(_path_dst) - 1]
+                path[len(_path_dst) - 1] = node_id, 0
+
         else:
             path = [((i['version'], i['branch']), d) for (i, d) in path]
             # This is not really needed for this direction, but change it for
             # consistency
             path[-1] = ((path[-1][0][0], path[-1][0][1]), path[-2][1])
+
+            if on_different_branches:
+                node_id, _ = path[len(path) - len(_path_dst)]
+                path[len(path) - len(_path_dst)] = node_id, 0
 
         return dict(path)
 

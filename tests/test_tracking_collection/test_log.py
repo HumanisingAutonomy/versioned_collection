@@ -894,18 +894,18 @@ class TestLogsCollection(InMemoryDatabaseSetup):
 
     def test_get_path_between_version_same_level(self):
         self._assertOrderedEqual(
-            {(2, 'main'): -1, (1, 'main'): 1, (0, 'b3'): 1},
+            {(2, 'main'): -1, (1, 'main'): 0, (0, 'b3'): 1},
             self.col.get_path_between_versions((2, 'main'), (0, 'b3'))
         )
 
     def test_get_path_between_versions(self):
         self._assertOrderedEqual(
-            {(2, 'main'): -1, (1, 'main'): 1, (0, 'b3'): 1, (0, 'b4'): 1},
-            self.col.get_path_between_versions((2, 'main'), (0, 'b4'))
+            {(0, 'b4'): -1, (0, 'b3'): -1, (1, 'main'): 0, (2, 'main'): 1},
+            self.col.get_path_between_versions((0, 'b4'), (2, 'main'))
         )
         self._assertOrderedEqual(
-            {(0, 'b4'): -1, (0, 'b3'): -1, (1, 'main'): 1, (2, 'main'): 1},
-            self.col.get_path_between_versions((0, 'b4'), (2, 'main'))
+            {(2, 'main'): -1, (1, 'main'): 0, (0, 'b3'): 1, (0, 'b4'): 1},
+            self.col.get_path_between_versions((2, 'main'), (0, 'b4'))
         )
 
     def test_rebranch_root_of_the_tree_raises_error(self):

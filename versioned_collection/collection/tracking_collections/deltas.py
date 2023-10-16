@@ -15,7 +15,6 @@ from treelib import Node
 from versioned_collection.collection.tracking_collections import (
     _BaseTrackerCollection,
 )
-from versioned_collection.errors import InvalidCollectionState
 from versioned_collection.tree import Tree
 from versioned_collection.utils.data_structures import hashabledict
 from versioned_collection.utils.mongo_query import group_documents_by_id
@@ -141,7 +140,7 @@ class DeltasCollection(_BaseTrackerCollection):
     ) -> Tree:
         # Build the per-document partial delta tree.
         tree = Tree()
-        to_visit = [root]  # the id of the root delta
+        to_visit = [root]
         while len(to_visit) > 0:
             _id = to_visit.pop(-1)
             if _id not in deltas:
@@ -350,7 +349,8 @@ class DeltasCollection(_BaseTrackerCollection):
         include the first delta document in `delta_docs` in its forward
         references field, i.e., ``next``.
 
-        :param delta_docs: The delta documents to be inserted.
+        :param delta_docs: The delta documents to be inserted. It is assumed
+            that the deltas are sorted.
         """
         deltas_ids = {d['_id'] for d in delta_docs}
         for i, delta_doc in enumerate(delta_docs):
@@ -499,7 +499,8 @@ class DeltasCollection(_BaseTrackerCollection):
         :param path: The path in the version tree from which to pull the
             delta documents.
         :param sorting_order: The order in which to sort the delta documents by
-            timestamp. If omitted, the sorting is skipped..
+            timestamp. ``1`` means ascending and ``-1`` means descending.
+             If omitted, the sorting step is skipped.
         :return: The delta documents.
         """
         versions = list(path.keys())
@@ -618,13 +619,18 @@ class DeltasCollection(_BaseTrackerCollection):
                 break
 
             for child in tree.children(node.identifier):
-                to_visit.append(child.identifier)
+                if self._version_of(tree.get_node(child.identifier)) in path:
+                    to_visit.append(child.identifier)
 
         # Reconstruct the paths. There are two possible cases:
-        #   1. `node` has only one child in `path`, therefore `node` is
-        #   either the start or the end of the path. This can be decided by
-        #   inspecting the direction for `node`, i.e., it is the start if the
-        #   direction is `1`, and it is the end if the direction is `-1`.
+        #   1. `node` has only one child in `path`. There are further two
+        #   sub-cases:
+        #       a) `node` is part of a linear path, ant it is either the end or
+        #          the start of the path. This can be decided by inspecting the
+        #          direction for `node`, i.e., it is the start if the direction
+        #          is `1`, and it is the end if the direction is `-1`.
+        #       b) `node` is the branching point of the path, but since it
+        #          has only one child in `path`, its deltas must be excluded.
         #
         #   2. `node` has two children in path, so the path starts lower in
         #   the tree, goes up to `node` and then descends to another child node,
@@ -656,20 +662,30 @@ class DeltasCollection(_BaseTrackerCollection):
             if _is_in_path:
                 i += 1
 
-        if len(paths[1]) == 0:
+        if not len(paths[1]):
             # Case 1
             _deltas = paths[0]
-            if path[self._version_of(node)] == 1:
+            node_version = self._version_of(node)
+
+            if path[node_version] == 1:
                 direction = 'forward'
                 _deltas.insert(0, node)
-            else:
+            elif path[node_version] == -1:
                 direction = 'backward'
                 _deltas.append(node)
+            else:
+                # Case 1 b)
+                if len(_deltas):
+                    d = path[self._version_of(_deltas[0])]
+                    assert d == 1 or d == -1
+                    direction = 'forward' if d == 1 else 'backward'
+                else:
+                    return []
             _deltas = _extract_and_decode_deltas(_deltas, direction)
         else:
             # Case 2
             # Fix the order
-            if path[self._version_of(paths[0][0])] in [0, 1]:
+            if path[self._version_of(paths[0][0])] == 1:
                 paths = paths[1], paths[0]
 
             # Build the path

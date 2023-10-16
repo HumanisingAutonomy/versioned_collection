@@ -1142,6 +1142,8 @@ class VersionedCollection(Collection):
         if current_source is None:
             current_source = self
 
+        per_document_deltas = {k:v for k, v in per_document_deltas.items() if
+                               len(v)}
         doc_ids = list(per_document_deltas.keys())
         current_documents = list(current_source.find({'_id': {'$in': doc_ids}}))
 

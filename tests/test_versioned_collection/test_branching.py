@@ -143,25 +143,32 @@ class TestVersionedCollectionBranching(_BaseTest):
     def _branching_setup(self):
         """
         Branching structure
+
+        ::
+
                   0_m
                   /
                 1_m
-              /     \
+              /     \\
             2_m     0_b2
-            / \\       \
+            / \\       \\
           3_m 0_b1     1_b2
-                        \
+                        \\
                         2_b2
-                          \
+                          \\
                           3_b2
 
-        self.DOCUMENT is updated in all versions except in '0_m;
+        self.DOCUMENT is updated in all versions except in 0_m;
         self.DOCUMENT2 is updated only in 1_m, 2_m and 0_b2
         """
 
         def _increase_v_and_update(doc):
             doc['v'] += 1
             self.user_collection.find_one_and_replace({'_id': doc['_id']}, doc)
+
+        def _assert_version(doc, version):
+            d = self.user_collection.find_one({"_id": doc['_id']})
+            self.assertEqual(d['v'], version)
 
         self.user_collection.init("0_m")
         self.DOCUMENT['v'] = 1
@@ -179,10 +186,12 @@ class TestVersionedCollectionBranching(_BaseTest):
         self.user_collection.register("3_m")
 
         self.user_collection.checkout(2)
+        _assert_version(self.DOCUMENT, 2)
         _increase_v_and_update(self.DOCUMENT)
         self.user_collection.register('0_b1', 'b1')
 
         self.user_collection.checkout(1, 'main')
+        _assert_version(self.DOCUMENT, 1)
         _increase_v_and_update(self.DOCUMENT)
         _increase_v_and_update(self.DOCUMENT2)
         self.user_collection.register('0_b2', 'b2')
