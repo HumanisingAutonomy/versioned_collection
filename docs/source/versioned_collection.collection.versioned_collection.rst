@@ -1,6 +1,4 @@
-.. _versioned-collection-api:
-
-versioned_collection.VersionedCollection
+versioned\_collection.collection.versioned\_collection module
 =============================================================
 
 .. automodule:: versioned_collection.collection.versioned_collection

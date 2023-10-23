@@ -1,6 +1,4 @@
-.. _deltas-collection:
-
-tracking\_collections.Deltas
+versioned\_collection.collection.tracking\_collections.deltas module
 ====================================================================
 
 .. automodule:: versioned_collection.collection.tracking_collections.deltas

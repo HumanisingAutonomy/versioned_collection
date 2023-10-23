@@ -1,6 +1,4 @@
-.. _replica-collection:
-
-tracking\_collections.Replica
+versioned\_collection.collection.tracking\_collections.replica module
 =====================================================================
 
 .. automodule:: versioned_collection.collection.tracking_collections.replica

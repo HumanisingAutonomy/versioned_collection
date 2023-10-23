@@ -1,4 +1,4 @@
-versioned\_collection.errors
+versioned\_collection.errors module
 ===================================
 
 .. automodule:: versioned_collection.errors

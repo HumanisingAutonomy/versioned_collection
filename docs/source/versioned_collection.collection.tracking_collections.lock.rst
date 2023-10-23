@@ -1,6 +1,4 @@
-.. _lock-collection:
-
-tracking\_collections.Lock
+versioned\_collection.collection.tracking\_collections.lock module
 ==================================================================
 
 .. automodule:: versioned_collection.collection.tracking_collections.lock

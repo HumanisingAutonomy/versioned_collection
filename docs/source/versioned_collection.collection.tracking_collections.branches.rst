@@ -1,6 +1,4 @@
-.. _branches-collection:
-
-tracking\_collections.Branches
+versioned\_collection.collection.tracking\_collections.branches module
 ======================================================================
 
 .. automodule:: versioned_collection.collection.tracking_collections.branches
