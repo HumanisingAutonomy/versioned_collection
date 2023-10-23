@@ -5,14 +5,15 @@ import pymongo.collection
 from bson import ObjectId
 
 import versioned_collection.collection.tracking_collections
-from tests.test_tracking_collection.in_memory_database import \
-    InMemoryDatabaseSetup
+from tests.test_tracking_collection.in_memory_database import InMemoryDatabaseSetup
 from versioned_collection.collection.tracking_collections import (
-    StashContainer, StashCollection
+    StashContainer,
+    StashCollection,
 )
 
 
 class TestStashCollection(InMemoryDatabaseSetup):
+
     def setUp(self) -> None:
         self.collection_name = 'col'
         self.container = StashContainer(self.database, self.collection_name)
@@ -142,7 +143,7 @@ class TestStashCollection(InMemoryDatabaseSetup):
 
         self.assertEqual(
             call([{'$match': {}}, {'$out': '__modified_col'}]),
-            self.modified_collection.aggregate.mock_calls[-1]
+            self.modified_collection.aggregate.mock_calls[-1],
         )
         self.main_collection.drop.assert_called_once()
         self.modified_collection.drop.assert_called_once()

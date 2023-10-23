@@ -10,10 +10,8 @@ from bson import ObjectId
 
 import versioned_collection.collection.tracking_collections
 import versioned_collection.errors as vc_errors
-from tests.test_tracking_collection.in_memory_database import \
-    InMemoryDatabaseSetup
-from versioned_collection.collection.tracking_collections import \
-    LogsCollection
+from tests.test_tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from versioned_collection.collection.tracking_collections import LogsCollection
 from versioned_collection.utils.data_structures import hashabledict
 
 
@@ -26,7 +24,7 @@ class TestLogSchema(TestCase):
             timestamp=datetime.datetime.utcnow(),
             message='Some message',
             prev=None,
-            next=[ObjectId(), ObjectId()]
+            next=[ObjectId(), ObjectId()],
         )
 
     def test_equal_log_entries(self):
@@ -112,7 +110,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
 
         with patch.object(
             versioned_collection.collection.tracking_collections.LogsCollection,
-            'exists'
+            'exists',
         ) as exists_mock:
             exists_mock.return_value = True
             self.assertFalse(col.build())
@@ -152,7 +150,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='root',
             prev=None,
-            next=[child_id]
+            next=[child_id],
         )
         e2 = dict(
             _id=child_id,
@@ -161,7 +159,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='v1',
             prev=root_id,
-            next=[]
+            next=[],
         )
 
         e3 = dict(
@@ -170,7 +168,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='v2',
             prev=None,
-            next=[]
+            next=[],
         )
         self._initialise_database([e1, e2, e3])
 
@@ -191,7 +189,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='root',
             prev=None,
-            next=[child_id]
+            next=[child_id],
         )
         e2 = dict(
             _id=child_id,
@@ -200,13 +198,12 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='v1',
             prev=ObjectId(),
-            next=[]
+            next=[],
         )
         self._initialise_database([e1, e2])
 
         with self.assertRaisesRegex(
-            vc_errors.InvalidCollectionState,
-            'parent does not exist'
+            vc_errors.InvalidCollectionState, 'parent does not exist'
         ):
             _col = self._get_collection()
 
@@ -219,13 +216,12 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='root',
             prev=ObjectId(),
-            next=[]
+            next=[],
         )
         self._initialise_database([entry])
 
         with self.assertRaisesRegex(
-            vc_errors.InvalidCollectionState,
-            'No root entry'
+            vc_errors.InvalidCollectionState, 'No root entry'
         ):
             _col = self._get_collection()
 
@@ -242,7 +238,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='root',
             prev=None,
-            next=[child_1_id, child_2_id]
+            next=[child_1_id, child_2_id],
         )
         child_1 = dict(
             _id=child_1_id,
@@ -251,7 +247,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='v1',
             prev=root_id,
-            next=[]
+            next=[],
         )
         child_2 = dict(
             _id=child_2_id,
@@ -260,7 +256,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='other branch',
             prev=root_id,
-            next=[]
+            next=[],
         )
         self._initialise_database([root, child_1, child_2])
         root.pop('_id')
@@ -277,17 +273,11 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
         self.assertEqual(3, len(col.log_tree))
 
         root_entry = col.get_log_entry(0, 'main')
-        self.assertEqual(
-            LogsCollection.SCHEMA(**root), root_entry
-        )
+        self.assertEqual(LogsCollection.SCHEMA(**root), root_entry)
         child_1_entry = col.get_log_entry(1, 'main')
-        self.assertEqual(
-            LogsCollection.SCHEMA(**child_1), child_1_entry
-        )
+        self.assertEqual(LogsCollection.SCHEMA(**child_1), child_1_entry)
         child_2_entry = col.get_log_entry(0, 'branch')
-        self.assertEqual(
-            LogsCollection.SCHEMA(**child_2), child_2_entry
-        )
+        self.assertEqual(LogsCollection.SCHEMA(**child_2), child_2_entry)
 
         log_tree_children = col.log_tree.children(col.log_tree.root)
         self.assertEqual(2, len(log_tree_children))
@@ -296,11 +286,11 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
 
         self.assertEqual(
             first_child.data,
-            LogsCollection.SCHEMA(**child_id_to_doc[first_child.tag])
+            LogsCollection.SCHEMA(**child_id_to_doc[first_child.tag]),
         )
         self.assertEqual(
             second_child.data,
-            LogsCollection.SCHEMA(**child_id_to_doc[second_child.tag])
+            LogsCollection.SCHEMA(**child_id_to_doc[second_child.tag]),
         )
 
         self._clean_up_database()
@@ -309,7 +299,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
         col = self._get_collection()
         with patch.object(
             versioned_collection.collection.tracking_collections.LogsCollection,
-            'exists'
+            'exists',
         ) as exists_mock:
             exists_mock.return_value = False
             self.assertFalse(col.reset())
@@ -320,7 +310,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
 
         with patch.object(
             versioned_collection.collection.tracking_collections.LogsCollection,
-            'exists'
+            'exists',
         ) as exists_mock:
             exists_mock.return_value = True
             with patch.object(pymongo.collection.Collection, 'drop') as drop:
@@ -364,7 +354,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='root',
             prev=None,
-            next=[child_id]
+            next=[child_id],
         )
         child = dict(
             _id=child_id,
@@ -373,13 +363,12 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='v1',
             prev=root_id,
-            next=[root_id]
+            next=[root_id],
         )
 
         self._initialise_database([root, child])
         with self.assertRaisesRegex(
-            vc_errors.InvalidCollectionState,
-            "The log tree has cycles"
+            vc_errors.InvalidCollectionState, "The log tree has cycles"
         ):
             _ = self._get_collection()
 
@@ -428,7 +417,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='root',
             prev=None,
-            next=[v1_main_id, v0_b1_id]
+            next=[v1_main_id, v0_b1_id],
         )
         v1_main = dict(
             _id=v1_main_id,
@@ -437,7 +426,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='v1',
             prev=root_id,
-            next=[v2_main_id, v0_b2_id, v0_b3_id]
+            next=[v2_main_id, v0_b2_id, v0_b3_id],
         )
         v2_main = dict(
             _id=v2_main_id,
@@ -446,7 +435,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='v2',
             prev=v1_main_id,
-            next=[]
+            next=[],
         )
         v0_b1 = dict(
             _id=v0_b1_id,
@@ -455,7 +444,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='a branch',
             prev=root_id,
-            next=[]
+            next=[],
         )
         v0_b2 = dict(
             _id=v0_b2_id,
@@ -464,7 +453,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='another branch',
             prev=v1_main_id,
-            next=[]
+            next=[],
         )
         v0_b3 = dict(
             _id=v0_b3_id,
@@ -473,7 +462,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='yet another branch',
             prev=v1_main_id,
-            next=[v1_b3_id, v0_b4_id]
+            next=[v1_b3_id, v0_b4_id],
         )
         v1_b3 = dict(
             _id=v1_b3_id,
@@ -482,7 +471,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='some version on yet another branch',
             prev=v0_b3_id,
-            next=[]
+            next=[],
         )
         v0_b4 = dict(
             _id=v0_b4_id,
@@ -491,7 +480,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             timestamp=datetime.datetime.utcnow(),
             message='yet some other branch',
             prev=v0_b3_id,
-            next=[]
+            next=[],
         )
 
         docs = [v0_main, v1_main, v2_main, v0_b1, v0_b2, v0_b3, v1_b3, v0_b4]
@@ -572,7 +561,8 @@ class TestLogsCollection(InMemoryDatabaseSetup):
     def test_versions_of_all_branch_tips(self):
         leaf_versions = set(self.col.get_versions_of_branch_tips((0, 'main')))
         expected = {
-            (e.version, e.branch) for e in self.log_entries.values()
+            (e.version, e.branch)
+            for e in self.log_entries.values()
             if e.next == []
         }
         self.assertEqual(expected, leaf_versions)
@@ -588,7 +578,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
     def test_get_version_of_branch_tips_in_subtree(self):
         self.assertEqual(
             {(1, 'b3'), (0, 'b4')},
-            set(self.col.get_versions_of_branch_tips((0, 'b3')))
+            set(self.col.get_versions_of_branch_tips((0, 'b3'))),
         )
 
     def test_contains_version(self):
@@ -601,8 +591,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
 
     def test_get_prev_ver_and_branch_called_with_root_version(self):
         self.assertEqual(
-            (-1, 'main'),
-            self.col.get_previous_version_and_branch(0, 'main')
+            (-1, 'main'), self.col.get_previous_version_and_branch(0, 'main')
         )
 
     def test_get_prev_ver_and_branch(self):
@@ -650,24 +639,26 @@ class TestLogsCollection(InMemoryDatabaseSetup):
         self.assertEqual(self.named_versions_to_id['v0_main'], b1_log[1].id)
 
     def test_get_log_from_a_specific_version(self):
-        self.assertEqual([
-            self.named_log_entries['v1_main'],
-            self.named_log_entries['v0_main']
-        ],
-            self.col.get_log('main', version=1)
+        self.assertEqual(
+            [
+                self.named_log_entries['v1_main'],
+                self.named_log_entries['v0_main'],
+            ],
+            self.col.get_log('main', version=1),
         )
 
-        self.assertEqual([
-            self.named_log_entries['v0_b3'],
-            self.named_log_entries['v1_main'],
-            self.named_log_entries['v0_main']
-        ],
-            self.col.get_log('b3', version=0)
+        self.assertEqual(
+            [
+                self.named_log_entries['v0_b3'],
+                self.named_log_entries['v1_main'],
+                self.named_log_entries['v0_main'],
+            ],
+            self.col.get_log('b3', version=0),
         )
 
         self.assertEqual(
             [self.named_log_entries['v0_main']],
-            self.col.get_log('main', version=0)
+            self.col.get_log('main', version=0),
         )
 
     def test_delete_subtree_at_root_version(self):
@@ -686,7 +677,6 @@ class TestLogsCollection(InMemoryDatabaseSetup):
         self,
         find_one_and_replace_mock,
         delete_many_mock,
-
     ):
         version, branch = 0, 'b2'
 
@@ -700,11 +690,12 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             {'version': 1, 'branch': 'main'}
         )
         children = self.col.log_tree.children(parent_version_tree_identifier)
-        self.assertEqual({
-            self.named_versions_to_id['v2_main'],
-            self.named_versions_to_id['v0_b3']
-        },
-            {c.tag for c in children}
+        self.assertEqual(
+            {
+                self.named_versions_to_id['v2_main'],
+                self.named_versions_to_id['v0_b3'],
+            },
+            {c.tag for c in children},
         )
 
         delete_many_mock.assert_called_once_with(
@@ -717,7 +708,8 @@ class TestLogsCollection(InMemoryDatabaseSetup):
                     "next": [
                         self.named_versions_to_id['v2_main'],
                         self.named_versions_to_id['v0_b3'],
-                    ]}
+                    ]
+                }
             },
         )
 
@@ -728,24 +720,24 @@ class TestLogsCollection(InMemoryDatabaseSetup):
 
         children = self.col.log_tree.children(self.col.log_tree.root)
         self.assertEqual(
-            {self.named_versions_to_id['v0_b1']},
-            {c.tag for c in children}
+            {self.named_versions_to_id['v0_b1']}, {c.tag for c in children}
         )
 
         nodes = list(self.col.find({}))
         self.assertEqual(2, len(nodes))
 
         nodes = {n['_id']: n for n in nodes}
-        self.assertEqual({
-            self.named_versions_to_id['v0_main'],
-            self.named_versions_to_id['v0_b1']
-        },
-            set(nodes.keys())
+        self.assertEqual(
+            {
+                self.named_versions_to_id['v0_main'],
+                self.named_versions_to_id['v0_b1'],
+            },
+            set(nodes.keys()),
         )
 
         self.assertEqual(
             [self.named_versions_to_id['v0_b1']],
-            nodes[self.named_versions_to_id['v0_main']]['next']
+            nodes[self.named_versions_to_id['v0_main']]['next'],
         )
 
     def test_add_log_entry_raises_error_if_prev_version_does_not_exist(self):
@@ -755,7 +747,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
                 previous_branch='b1',
                 current_branch='b1',
                 message='this will not be recorded',
-                timestamp=datetime.datetime.utcnow()
+                timestamp=datetime.datetime.utcnow(),
             )
 
     @patch.object(pymongo.collection.Collection, 'insert_one')
@@ -771,7 +763,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             current_branch='b5',
             message='first version on b5',
             timestamp=datetime.datetime.utcnow(),
-            with_id=ObjectId()
+            with_id=ObjectId(),
         )
         inserted_result_mock = MagicMock()
         inserted_result_mock.inserted_id = args['with_id']
@@ -805,7 +797,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             current_branch='main',
             message='root',
             timestamp=datetime.datetime.utcnow(),
-            with_id=ObjectId()
+            with_id=ObjectId(),
         )
 
         inserted_result_mock = MagicMock()
@@ -823,7 +815,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             'message': args['message'],
             'timestamp': args['timestamp'],
             'prev': None,
-            'next': []
+            'next': [],
         })
 
     @patch.object(pymongo.collection.Collection, 'insert_one')
@@ -834,7 +826,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             current_branch='b4',
             message='a version',
             timestamp=datetime.datetime.utcnow(),
-            with_id=ObjectId()
+            with_id=ObjectId(),
         )
         inserted_result_mock = MagicMock()
         inserted_result_mock.inserted_id = args['with_id']
@@ -848,7 +840,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             'message': args['message'],
             'timestamp': args['timestamp'],
             'prev': self.named_versions_to_id['v0_b4'],
-            'next': []
+            'next': [],
         })
 
     def test_get_path_between_non_existing_versions(self):
@@ -877,35 +869,35 @@ class TestLogsCollection(InMemoryDatabaseSetup):
         # forward
         self._assertOrderedEqual(
             {(0, 'main'): 1, (1, 'main'): 1, (2, 'main'): 1},
-            self.col.get_path_between_versions((0, 'main'), (2, 'main'))
+            self.col.get_path_between_versions((0, 'main'), (2, 'main')),
         )
 
         # reverse
         self._assertOrderedEqual(
             {(2, 'main'): -1, (1, 'main'): -1, (0, 'main'): -1},
-            self.col.get_path_between_versions((2, 'main'), (0, 'main'))
+            self.col.get_path_between_versions((2, 'main'), (0, 'main')),
         )
 
         # path of length 1
         self._assertOrderedEqual(
             {(0, 'b3'): -1, (1, 'main'): -1},
-            self.col.get_path_between_versions((0, 'b3'), (1, 'main'))
+            self.col.get_path_between_versions((0, 'b3'), (1, 'main')),
         )
 
     def test_get_path_between_version_same_level(self):
         self._assertOrderedEqual(
             {(2, 'main'): -1, (1, 'main'): 0, (0, 'b3'): 1},
-            self.col.get_path_between_versions((2, 'main'), (0, 'b3'))
+            self.col.get_path_between_versions((2, 'main'), (0, 'b3')),
         )
 
     def test_get_path_between_versions(self):
         self._assertOrderedEqual(
             {(0, 'b4'): -1, (0, 'b3'): -1, (1, 'main'): 0, (2, 'main'): 1},
-            self.col.get_path_between_versions((0, 'b4'), (2, 'main'))
+            self.col.get_path_between_versions((0, 'b4'), (2, 'main')),
         )
         self._assertOrderedEqual(
             {(2, 'main'): -1, (1, 'main'): 0, (0, 'b3'): 1, (0, 'b4'): 1},
-            self.col.get_path_between_versions((2, 'main'), (0, 'b4'))
+            self.col.get_path_between_versions((2, 'main'), (0, 'b4')),
         )
 
     def test_rebranch_root_of_the_tree_raises_error(self):
@@ -920,21 +912,15 @@ class TestLogsCollection(InMemoryDatabaseSetup):
         new_version = hashabledict({'version': 0, 'branch': 'new'})
         node = self.col._log_tree.get_node(new_version)
         self.assertEqual(node.data.branch, 'new')
-        self.assertEqual(
-            node.data.prev,
-            self.named_versions_to_id['v0_main']
-        )
+        self.assertEqual(node.data.prev, self.named_versions_to_id['v0_main'])
 
     def test_rebranch_subtree(self):
         self.col.rebranch((0, 'b3'), 'new')
-        node = self.col._log_tree.get_node(hashabledict(
-            {'version': 0, 'branch': 'new'}
-        ))
-        self.assertEqual(node.data.branch, 'new')
-        self.assertEqual(
-            node.data.prev,
-            self.named_versions_to_id['v1_main']
+        node = self.col._log_tree.get_node(
+            hashabledict({'version': 0, 'branch': 'new'})
         )
+        self.assertEqual(node.data.branch, 'new')
+        self.assertEqual(node.data.prev, self.named_versions_to_id['v1_main'])
 
         c1, c2 = self.col._log_tree.children(node.identifier)
 
@@ -949,6 +935,5 @@ class TestLogsCollection(InMemoryDatabaseSetup):
         self.assertEqual(children['new'].data.branch, 'new')
         self.assertEqual(children['new'].data.version, 1)
         self.assertEqual(
-            children['new'].data.prev,
-            self.named_versions_to_id['v0_b3']
+            children['new'].data.prev, self.named_versions_to_id['v0_b3']
         )

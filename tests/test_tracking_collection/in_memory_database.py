@@ -10,6 +10,7 @@ import pymongo_inmemory
 #  up.
 class InMemoryDatabaseSetup(TestCase):
     """An in-memory MongoDB instance."""
+
     # Unfortunately the full in-memory database is not free, so
     # ``pymongo-inmemory`` uses a `ephemeralForTest` instance, which does not
     # support replica sets, therefore change streams, so we cannot use it to

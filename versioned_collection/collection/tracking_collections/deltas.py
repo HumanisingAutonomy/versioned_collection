@@ -706,7 +706,7 @@ class DeltasCollection(_BaseTrackerCollection):
         Dict[Any, _DOCUMENT_TYPE],
         Tuple[Dict[Any, _DOCUMENT_TYPE], Dict[Any, _DOCUMENT_TYPE]],
     ]:
-        """Update the given documents and returns them.
+        """Update the given documents and return them.
 
         Applies the deltas between two versions of the target collection. It
         uses the given deltas grouped by document and sorted by the direction
@@ -719,8 +719,8 @@ class DeltasCollection(_BaseTrackerCollection):
         :param documents: The list of documents that will be updated.
         :param return_current_documents: Whether to return the current
             documents grouped by id.
-        :param: If `return_current_documents` is set, the current documents are
-            returned as well.
+        :param: If ``return_current_documents`` is set, the current documents
+            are returned as well.
         :return: The updated documents grouped by their ``'_id'`` field. If
             The documents that are empty should be removed from the target
             collection.
@@ -748,8 +748,8 @@ class DeltasCollection(_BaseTrackerCollection):
 
         if return_current_documents:
             return updated_docs, documents
-        else:
-            return updated_docs
+
+        return updated_docs
 
     @staticmethod
     def _process_deltas(

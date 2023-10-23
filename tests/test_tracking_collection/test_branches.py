@@ -4,19 +4,18 @@ from unittest.mock import patch
 import pymongo
 
 import versioned_collection.errors as vc_errors
-from tests.test_tracking_collection.in_memory_database import \
-    InMemoryDatabaseSetup
-from versioned_collection.collection.tracking_collections import \
-    BranchesCollection
+from tests.test_tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from versioned_collection.collection.tracking_collections import BranchesCollection
 
 
 class TestBranchesCollectionSchema(TestCase):
+
     @staticmethod
     def _get_main_args():
         return {
             'name': 'main',
             'points_to_collection_version': 0,
-            'points_to_branch': 'main'
+            'points_to_branch': 'main',
         }
 
     def test_equal_branches(self):
@@ -64,7 +63,7 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
             mock.assert_called_with({
                 'name': 'main',
                 'points_to_collection_version': 0,
-                'points_to_branch': 'main'
+                'points_to_branch': 'main',
             })
         col.drop()
 
@@ -82,7 +81,7 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
             self.collection.create_branch(
                 branch='main',
                 pointing_to_collection_version=0,
-                pointing_to_branch='main'
+                pointing_to_branch='main',
             )
 
     def test_creating_a_branch_adds_it_to_the_database(self):
@@ -90,12 +89,12 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
             self.collection.create_branch(
                 branch='branch',
                 pointing_to_collection_version=0,
-                pointing_to_branch='main'
+                pointing_to_branch='main',
             )
             mock.assert_called_once_with({
                 'name': 'branch',
                 'points_to_collection_version': 0,
-                'points_to_branch': 'main'
+                'points_to_branch': 'main',
             })
 
     def test_has_branch_with_existing_branch(self):
@@ -137,21 +136,14 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
 
     @patch.object(pymongo.collection.Collection, 'find_one_and_replace')
     def test_update_branch_info_but_keeping_the_name(self, mock):
-        data = {
-            'points_to_collection_version': 1,
-            'points_to_branch': 'main'
-        }
+        data = {'points_to_collection_version': 1, 'points_to_branch': 'main'}
         self.collection.update_branch(
             branch='main',
             pointing_to_collection_version=data['points_to_collection_version'],
             pointing_to_branch=data['points_to_branch'],
         )
         mock.assert_called_once_with(
-            filter={'name': 'main'},
-            replacement={
-                'name': 'main',
-                **data
-            }
+            filter={'name': 'main'}, replacement={'name': 'main', **data}
         )
 
     @patch.object(BranchesCollection, 'has_branch')
@@ -170,8 +162,8 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
             replacement={
                 'name': 'new_main',
                 'points_to_collection_version': 0,
-                'points_to_branch': 'main'
-            }
+                'points_to_branch': 'main',
+            },
         )
 
     def test_delete_branch(self):
@@ -192,22 +184,16 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
     def test_get_empty_branches(self):
         args = {
             'pointing_to_collection_version': 0,
-            'pointing_to_branch': 'main'
+            'pointing_to_branch': 'main',
         }
-        self.collection.create_branch(
-            branch='empty_1',
-            **args
-        )
+        self.collection.create_branch(branch='empty_1', **args)
 
         branches = self.collection.get_empty_branches()
         self.assertEqual(1, len(branches))
         branch = branches.pop()
         self.assertEqual(branch.name, 'empty_1')
 
-        self.collection.create_branch(
-            branch='empty_2',
-            **args
-        )
+        self.collection.create_branch(branch='empty_2', **args)
         branches = self.collection.get_empty_branches()
         self.assertEqual(2, len(branches))
 
@@ -219,13 +205,13 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
         self.collection.create_branch(
             branch='empty_1',
             pointing_to_branch='main',
-            pointing_to_collection_version=0
+            pointing_to_collection_version=0,
         )
 
         self.collection.create_branch(
             branch='empty_2',
             pointing_to_branch='main',
-            pointing_to_collection_version=3
+            pointing_to_collection_version=3,
         )
 
     def test_get_all_empty_child_branches(self):
@@ -248,12 +234,12 @@ class TestBranchesCollection(InMemoryDatabaseSetup):
         self.collection.create_branch(
             branch='empty_2_0',
             pointing_to_branch='empty_2',
-            pointing_to_collection_version=0
+            pointing_to_collection_version=0,
         )
         self.collection.create_branch(
             branch='empty_2_1',
             pointing_to_branch='empty_2',
-            pointing_to_collection_version=1
+            pointing_to_collection_version=1,
         )
 
         branches = self.collection.get_empty_child_branches(branch='empty_2')

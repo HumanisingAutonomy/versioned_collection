@@ -3,10 +3,8 @@ from unittest.mock import patch
 import pymongo
 import pymongo.database
 
-from tests.test_tracking_collection.in_memory_database import \
-    InMemoryDatabaseSetup
-from versioned_collection.collection.tracking_collections import \
-    _BaseTrackerCollection  # noqa
+from tests.test_tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from versioned_collection.collection.tracking_collections import _BaseTrackerCollection  # noqa
 
 
 class SomeCollection(_BaseTrackerCollection):
@@ -23,13 +21,11 @@ class TestBaseCollection(InMemoryDatabaseSetup):
 
     def test_collections_are_equal_if_they_have_the_same_name(self):
         self.assertEqual(
-            self.collection,
-            SomeCollection(self.database, 'someName')
+            self.collection, SomeCollection(self.database, 'someName')
         )
 
         self.assertNotEqual(
-            self.collection,
-            SomeCollection(self.database, 'someOtherName')
+            self.collection, SomeCollection(self.database, 'someOtherName')
         )
 
     def test_building_a_collection_physically_creates_it(self):
@@ -41,8 +37,7 @@ class TestBaseCollection(InMemoryDatabaseSetup):
         self.collection.build()
         with patch.object(pymongo.collection.Collection, 'drop') as drop_mock:
             with patch.object(
-                pymongo.database.Database,
-                'create_collection'
+                pymongo.database.Database, 'create_collection'
             ) as create_collection_mock:
                 self.collection.build()
                 drop_mock.assert_called_once()

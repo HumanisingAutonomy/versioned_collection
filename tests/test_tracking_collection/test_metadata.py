@@ -2,10 +2,8 @@ from unittest.mock import patch
 
 import pymongo.collection
 
-from tests.test_tracking_collection.in_memory_database import \
-    InMemoryDatabaseSetup
-from versioned_collection.collection.tracking_collections import \
-    MetadataCollection
+from tests.test_tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from versioned_collection.collection.tracking_collections import MetadataCollection
 
 
 class TestMetadataCollection(InMemoryDatabaseSetup):
@@ -51,8 +49,7 @@ class TestMetadataCollection(InMemoryDatabaseSetup):
 
     def test_set_metadata_with_the_same_values_does_not_change_database(self):
         with patch.object(
-            pymongo.collection.Collection,
-            'find_one_and_replace'
+            pymongo.collection.Collection, 'find_one_and_replace'
         ) as mock:
             self.collection.set_metadata()
             self.collection.set_metadata(
@@ -75,8 +72,7 @@ class TestMetadataCollection(InMemoryDatabaseSetup):
             has_conflicts=True,
         )
         with patch.object(
-            pymongo.collection.Collection,
-            'find_one_and_replace'
+            pymongo.collection.Collection, 'find_one_and_replace'
         ) as mock:
             self.collection.set_metadata(**new_metadata)
             mock.assert_called_once()
@@ -88,8 +84,7 @@ class TestMetadataCollection(InMemoryDatabaseSetup):
 
     def test_metadata_set_changed(self):
         with patch.object(
-            pymongo.collection.Collection,
-            'find_one_and_replace'
+            pymongo.collection.Collection, 'find_one_and_replace'
         ) as mock:
             self.collection.set_metadata(changed=True)
             mock.assert_called_once()

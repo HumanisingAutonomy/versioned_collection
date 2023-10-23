@@ -39,7 +39,7 @@ class BranchesCollection(_BaseTrackerCollection):
             return hash((
                 self.name,
                 self.points_to_branch,
-                self.points_to_collection_version
+                self.points_to_collection_version,
             ))
 
         def __eq__(self, other: BranchesCollection.SCHEMA) -> bool:
@@ -171,9 +171,9 @@ class BranchesCollection(_BaseTrackerCollection):
             filter={
                 'points_to_branch': branch,
                 "$expr": {"$ne": ['$name', '$points_to_branch']},
-                'points_to_collection_version': {"$gte": after_version}
+                'points_to_collection_version': {"$gte": after_version},
             },
-            projection={'_id': False}
+            projection={'_id': False},
         )
         return [self.SCHEMA(**b) for b in branches]
 

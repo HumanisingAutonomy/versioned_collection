@@ -3,13 +3,12 @@ from unittest.mock import patch, MagicMock
 import pymongo.collection
 import pymongo.database
 
-from tests.test_tracking_collection.in_memory_database import \
-    InMemoryDatabaseSetup
-from versioned_collection.collection.tracking_collections import \
-    ReplicaCollection
+from tests.test_tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from versioned_collection.collection.tracking_collections import ReplicaCollection
 
 
 class TestReplicaCollection(InMemoryDatabaseSetup):
+
     def setUp(self) -> None:
         self._target_collection_name = 'col'
         self.collection = ReplicaCollection(

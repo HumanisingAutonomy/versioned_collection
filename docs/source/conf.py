@@ -14,9 +14,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath('../..'))
-autodoc_mock_imports = [
-    'pymongo', 'treelib', 'colorama', 'deepdiff', 'bson'
-]
+autodoc_mock_imports = ['pymongo', 'treelib', 'colorama', 'deepdiff', 'bson']
 
 # -- Project information -----------------------------------------------------
 
@@ -79,7 +77,7 @@ html_theme_options = {
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,
-    'titles_only': False
+    'titles_only': False,
 }
 
 html_logo = '_static/img/logo.png'

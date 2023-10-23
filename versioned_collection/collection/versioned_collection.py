@@ -999,9 +999,7 @@ class VersionedCollection(Collection):
                     "(version_id: {}, branch: {}) does not exist."
                 )
                 raise InvalidCollectionVersion(
-                    version=version,
-                    branch=branch,
-                    message=err_message
+                    version=version, branch=branch, message=err_message
                 )
 
             # The current branch is empty, i.e., there are no versions
@@ -1142,8 +1140,9 @@ class VersionedCollection(Collection):
         if current_source is None:
             current_source = self
 
-        per_document_deltas = {k:v for k, v in per_document_deltas.items() if
-                               len(v)}
+        per_document_deltas = {
+            k: v for k, v in per_document_deltas.items() if len(v)
+        }
         doc_ids = list(per_document_deltas.keys())
         current_documents = list(current_source.find({'_id': {'$in': doc_ids}}))
 

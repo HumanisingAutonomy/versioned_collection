@@ -51,8 +51,7 @@ class MetadataCollection(_BaseTrackerCollection):
             return
         self._metadata = metadata
         self.find_one_and_replace(
-            filter={},
-            replacement=self._metadata.__dict__
+            filter={}, replacement=self._metadata.__dict__
         )
 
     def set_metadata(

@@ -9,10 +9,8 @@ import pymongo
 from bson import ObjectId
 
 import versioned_collection.collection.tracking_collections
-from tests.test_tracking_collection.in_memory_database import \
-    InMemoryDatabaseSetup
-from versioned_collection.collection.tracking_collections import \
-    DeltasCollection
+from tests.test_tracking_collection.in_memory_database import InMemoryDatabaseSetup
+from versioned_collection.collection.tracking_collections import DeltasCollection
 
 
 def _get_timestamp():
@@ -57,11 +55,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
 
     def setUp(self) -> None:
         self.col = DeltasCollection(self.database, 'col')
-        self.doc = {
-            '_id': ObjectId(),
-            'v': 0,
-            'a_field': 'a_value'
-        }
+        self.doc = {'_id': ObjectId(), 'v': 0, 'a_field': 'a_value'}
 
     def tearDown(self) -> None:
         self.col.drop()
@@ -84,7 +78,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
 
         with patch.object(
             versioned_collection.collection.tracking_collections.DeltasCollection,
-            'exists'
+            'exists',
         ) as exists_mock:
             exists_mock.return_value = True
             self.assertFalse(col.build())
@@ -97,7 +91,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=1,
             branch='main',
             timestamp=datetime.datetime.utcnow(),
-            branch_history=[]
+            branch_history=[],
         )
         self.assertIsNone(delta_id)
 
@@ -111,7 +105,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=1,
             branch='main',
             timestamp=timestamp,
-            branch_history=[(0, 'main')]
+            branch_history=[(0, 'main')],
         )
         self.assertIsNotNone(delta_id)
 
@@ -146,7 +140,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=1,
             branch='main',
             timestamp=_get_timestamp(),
-            branch_history=[(0, 'main')]
+            branch_history=[(0, 'main')],
         )
 
         new_doc = _update_doc(self.doc)
@@ -157,7 +151,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=2,
             branch='main',
             timestamp=_get_timestamp(),
-            branch_history=[(1, 'main'), (0, 'main')]
+            branch_history=[(1, 'main'), (0, 'main')],
         )
 
         parent_delta = self.col.find_one({'_id': first_delta_id})
@@ -183,7 +177,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=2,
             branch='main',
             timestamp=_get_timestamp(),
-            branch_history=[(1, 'main'), (0, 'main')]
+            branch_history=[(1, 'main'), (0, 'main')],
         )
 
         second_delta_id = self.col.add_delta(
@@ -193,7 +187,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=0,
             branch='branch',
             timestamp=_get_timestamp(),
-            branch_history=[(0, 'branch'), (1, 'main'), (0, 'main')]
+            branch_history=[(0, 'branch'), (1, 'main'), (0, 'main')],
         )
 
         first_delta = self.col.find_one({'_id': first_delta_id})
@@ -202,19 +196,25 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
         second_delta = self.col.find_one({'_id': second_delta_id})
         self.assertIsNone(second_delta['prev'])
 
-    def _setup_1(self) -> Tuple[
+    def _setup_1(
+        self,
+    ) -> Tuple[
         Dict[ObjectId, Dict[str, ObjectId]],
-        Dict[ObjectId, Dict[str, Dict[str, deepdiff.Delta]]]
+        Dict[ObjectId, Dict[str, Dict[str, deepdiff.Delta]]],
     ]:
-        #
-        #            0_m
-        #              \
-        #              1_m
-        #            /   \
-        #         0_b    2_m
-        #                 \
-        #                 3_m
-        #
+        """Setup for self.doc.
+
+        ::
+
+                    0_m
+                      \\
+                      1_m
+                    /   \\
+                 0_b    2_m
+                          \\
+                          3_m
+        """
+
         d1_deltas = defaultdict(dict)
 
         d_old = dict()
@@ -229,7 +229,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=1,
             branch='main',
             timestamp=_get_timestamp(),
-            branch_history=[(0, 'main')]
+            branch_history=[(0, 'main')],
         )
 
         d_old = self.doc
@@ -244,7 +244,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=2,
             branch='main',
             timestamp=_get_timestamp(),
-            branch_history=[(1, 'main'), (0, 'main')]
+            branch_history=[(1, 'main'), (0, 'main')],
         )
 
         d_old = d_new
@@ -259,7 +259,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=3,
             branch='main',
             timestamp=_get_timestamp(),
-            branch_history=[(2, 'main'), (1, 'main'), (0, 'main')]
+            branch_history=[(2, 'main'), (1, 'main'), (0, 'main')],
         )
         d_old = dict()
         d_new = self.doc
@@ -273,7 +273,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=0,
             branch='b',
             timestamp=_get_timestamp(),
-            branch_history=[(1, 'main'), (0, 'main')]
+            branch_history=[(1, 'main'), (0, 'main')],
         )
 
         deep_deltas = dict()
@@ -281,23 +281,30 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
 
         delta_ids = dict()
         delta_ids[self.doc['_id']] = {
-            '1_m': d1_m, '2_m': d2_m, '3_m': d3_m, '0_b': d0_b
+            '1_m': d1_m,
+            '2_m': d2_m,
+            '3_m': d3_m,
+            '0_b': d0_b,
         }
         return delta_ids, deep_deltas
-    
+
     def test_get_delta_documents_in_path_forward(self):
         delta_ids, _ = self._setup_1()
         delta_ids = delta_ids[self.doc['_id']]
-        deltas = list(self.col.get_delta_documents_in_path(
-            {(0, 'main'): 1, (1, 'main'): 1, (2, 'main'): 1, (3, 'main'): 1}
-        ))
+        deltas = list(
+            self.col.get_delta_documents_in_path(
+                {(0, 'main'): 1, (1, 'main'): 1, (2, 'main'): 1, (3, 'main'): 1}
+            )
+        )
         self.assertEqual(1, len(deltas))
         group = deltas[0]
         self.assertEqual(self.doc['_id'], group['_id'])
 
         ret_deltas_ids = [d['_id'] for d in group['deltas']]
         expected_deltas_ids = [
-            delta_ids['1_m'], delta_ids['2_m'], delta_ids['3_m']
+            delta_ids['1_m'],
+            delta_ids['2_m'],
+            delta_ids['3_m'],
         ]
         self.assertEqual(expected_deltas_ids, ret_deltas_ids)
 
@@ -305,52 +312,59 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
         delta_ids, _ = self._setup_1()
         delta_ids = delta_ids[self.doc['_id']]
         path = {
-            (3, 'main'): -1, (2, 'main'): -1, (1, 'main'): -1, (0, 'main'): -1
+            (3, 'main'): -1,
+            (2, 'main'): -1,
+            (1, 'main'): -1,
+            (0, 'main'): -1,
         }
-        deltas = list(self.col.get_delta_documents_in_path(
-            path, sorting_order=pymongo.DESCENDING
-        ))
+        deltas = list(
+            self.col.get_delta_documents_in_path(
+                path, sorting_order=pymongo.DESCENDING
+            )
+        )
         self.assertEqual(1, len(deltas))
         group = deltas[0]
         self.assertEqual(self.doc['_id'], group['_id'])
 
         ret_deltas_ids = [d['_id'] for d in group['deltas']]
         expected_deltas_ids = [
-            delta_ids['3_m'], delta_ids['2_m'], delta_ids['1_m']
+            delta_ids['3_m'],
+            delta_ids['2_m'],
+            delta_ids['1_m'],
         ]
         self.assertEqual(expected_deltas_ids, ret_deltas_ids)
 
     def test_get_delta_documents_in_path_with_branch(self):
         delta_ids, _ = self._setup_1()
         delta_ids = delta_ids[self.doc['_id']]
-        path = {
-            (3, 'main'): -1, (2, 'main'): -1, (1, 'main'): 1, (0, 'b'): 1
-        }
-        deltas = list(self.col.get_delta_documents_in_path(
-            path
-        ))
+        path = {(3, 'main'): -1, (2, 'main'): -1, (1, 'main'): 1, (0, 'b'): 1}
+        deltas = list(self.col.get_delta_documents_in_path(path))
         self.assertEqual(1, len(deltas))
         group = deltas[0]
         self.assertEqual(self.doc['_id'], group['_id'])
 
         ret_deltas_ids = {d['_id'] for d in group['deltas']}
         expected_deltas_ids = {
-            delta_ids['3_m'], delta_ids['2_m'], delta_ids['1_m'],
-            delta_ids['0_b']
+            delta_ids['3_m'],
+            delta_ids['2_m'],
+            delta_ids['1_m'],
+            delta_ids['0_b'],
         }
         self.assertEqual(expected_deltas_ids, ret_deltas_ids)
 
     def _setup_2(self):
-        #
-        #         self.doc          self.doc2
-        #            [0_m]
-        #              \             /    \
-        #              1_m         0_c    1_m
-        #             /  \                  \
-        #          0_b   2_m                 \
-        #                 \                   \
-        #                 3_m                 3_m
-        #
+        """
+            ::
+
+                 self.doc          self.doc2
+                    [0_m]
+                      \\             /    \\
+                      1_m         0_c     1_m
+                     /  \\                  \\
+                  0_b    2_m                \\
+                          \\                  \\
+                          3_m                 3_m
+        """
         delta_ids, deep_deltas = self._setup_1()
 
         self.doc2 = deepcopy(self.doc)
@@ -371,7 +385,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=0,
             branch='c',
             timestamp=_get_timestamp(),
-            branch_history=[(0, 'main')]
+            branch_history=[(0, 'main')],
         )
 
         d_old = dict()
@@ -386,7 +400,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=1,
             branch='main',
             timestamp=_get_timestamp(),
-            branch_history=[(0, 'main')]
+            branch_history=[(0, 'main')],
         )
 
         d_old = self.doc2
@@ -401,11 +415,13 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             collection_version=3,
             branch='main',
             timestamp=_get_timestamp(),
-            branch_history=[(2, 'main'), (1, 'main'), (0, 'main')]
+            branch_history=[(2, 'main'), (1, 'main'), (0, 'main')],
         )
 
         delta_ids[self.doc2['_id']] = {
-            '1_m': d2_1_m, '3_m': d2_3_m, '0_c': d2_0_c
+            '1_m': d2_1_m,
+            '3_m': d2_3_m,
+            '0_c': d2_0_c,
         }
         deep_deltas[self.doc2['_id']] = d2_deltas
 
@@ -432,6 +448,57 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
         ]
         self.assertEqualDeltaLists(expected_d2, deltas[doc_2_id])
 
+    def test_rebranch(self):
+        delta_ids, deep_deltas = self._setup_1()
+        delta_ids = delta_ids[self.doc['_id']]
+
+        new_branch_name = "main_temp"
+        self.col.rebranch((1, 'main'), new_branch_name, 3)
+
+        deltas = list(self.col.find({'branch': new_branch_name}))
+        self.assertEqual(3, len(deltas))
+
+        deltas = sorted(deltas, key=lambda d: d['collection_version_id'])
+        self.assertEqual(delta_ids['1_m'], deltas[0]['_id'])
+        self.assertEqual(0, deltas[0]['collection_version_id'])
+        self.assertEqual(
+            {delta_ids['0_b'], delta_ids['2_m']}, set(deltas[0]['next'])
+        )
+
+        self.assertEqual(delta_ids['2_m'], deltas[1]['_id'])
+        self.assertEqual(1, deltas[1]['collection_version_id'])
+        self.assertEqual([delta_ids['3_m']], deltas[1]['next'])
+
+        self.assertEqual(delta_ids['3_m'], deltas[2]['_id'])
+        self.assertEqual(2, deltas[2]['collection_version_id'])
+
+    def test_delete_subtrees_root(self):
+        self._setup_1()
+        self.col.delete_subtrees(
+            root=(0, 'main'), leaves=[(0, 'b'), (3, 'main')]
+        )
+        self.assertIsNone(self.col.find_one({}))
+
+    def test_delete_subtrees_branch_tip(self):
+        self._setup_1()
+        self.col.delete_subtrees(root=(0, 'b'), leaves=[(0, 'b')])
+        self.assertIsNone(
+            self.col.find_one({'collection_version_id': 0, 'branch': 'b'})
+        )
+
+    def test_delete_subtrees(self):
+        delta_ids, _ = self._setup_1()
+        delta_ids = delta_ids[self.doc['_id']]
+
+        self.col.delete_subtrees(root=(2, 'main'), leaves=[(3, 'main')])
+        res = list(
+            self.col.find(
+                {'branch': 'main', 'collection_version_id': {"$gte": 1}}
+            )
+        )
+        self.assertEqual(1, len(res))
+        self.assertEqual(delta_ids['1_m'], res[0]['_id'])
+
 
 class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
 
@@ -441,11 +508,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         cls.col = DeltasCollection(cls.database, 'col')
 
     def setUp(self) -> None:
-        self.doc = {
-            '_id': ObjectId(),
-            'v': 0,
-            'a_field': 'a_value'
-        }
+        self.doc = {'_id': ObjectId(), 'v': 0, 'a_field': 'a_value'}
 
     def assertEqualDeltaLists(
         self, l1: List[deepdiff.Delta], l2: List[deepdiff.Delta]
@@ -514,7 +577,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         update_one_mock,
         find_mock,
         child_version: int,
-        child_branch: str
+        child_branch: str,
     ):
         forward, backward = _get_forward_backward_deltas(dict(), self.doc)
 
@@ -586,7 +649,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             update_one_mock,
             find_mock,
             child_version=2,
-            child_branch='main'
+            child_branch='main',
         )
 
     @patch.object(pymongo.collection.Collection, 'find')
@@ -642,9 +705,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         insert_one_mock.assert_not_called()
         find_one_and_update_mock.assert_not_called()
 
-        forward2, backward2 = _get_forward_backward_deltas(
-            doc_old, doc_new
-        )
+        forward2, backward2 = _get_forward_backward_deltas(doc_old, doc_new)
 
         update_one_mock.assert_called_once_with(
             {'_id': first_delta['_id']},
@@ -718,9 +779,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         insert_one_mock.assert_not_called()
         find_one_and_update_mock.assert_not_called()
 
-        forward2, backward2 = _get_forward_backward_deltas(
-            doc_old, doc_new
-        )
+        forward2, backward2 = _get_forward_backward_deltas(doc_old, doc_new)
 
         update_one_mock.assert_called_once_with(
             {'_id': first_delta['_id']},
@@ -749,7 +808,7 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             update_one_mock,
             find_mock,
             child_version=0,
-            child_branch='branch'
+            child_branch='branch',
         )
 
     @patch.object(pymongo.collection.Collection, 'find')
@@ -880,15 +939,23 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
 
         # We don't care for delta (0, 'm') since that would move to (0, 'm'),
         # not from (0, 'm')
-        cond = {"$or": [
-            {'collection_version_id': 1, 'branch': 'm'},
-            {'collection_version_id': 2, 'branch': 'm'},
-        ]}
-        aggregate_mock.assert_called_once_with([
-            {"$match": cond},
-            {"$group": {'_id': "$document_id", 'deltas': {"$push": "$$ROOT"}}}
-        ],
-            allowDiskUse=True
+        cond = {
+            "$or": [
+                {'collection_version_id': 1, 'branch': 'm'},
+                {'collection_version_id': 2, 'branch': 'm'},
+            ]
+        }
+        aggregate_mock.assert_called_once_with(
+            [
+                {"$match": cond},
+                {
+                    "$group": {
+                        '_id': "$document_id",
+                        'deltas': {"$push": "$$ROOT"},
+                    }
+                },
+            ],
+            allowDiskUse=True,
         )
 
     @patch.object(pymongo.collection.Collection, 'aggregate')
@@ -900,15 +967,23 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
 
         # We don't care for delta (0, 'm') since that would move backward from
         # (0, 'm'), not to (0, 'm')
-        cond = {"$or": [
-            {'collection_version_id': 2, 'branch': 'm'},
-            {'collection_version_id': 1, 'branch': 'm'},
-        ]}
-        aggregate_mock.assert_called_once_with([
-            {"$match": cond},
-            {"$group": {'_id': "$document_id", 'deltas': {"$push": "$$ROOT"}}}
-        ],
-            allowDiskUse=True
+        cond = {
+            "$or": [
+                {'collection_version_id': 2, 'branch': 'm'},
+                {'collection_version_id': 1, 'branch': 'm'},
+            ]
+        }
+        aggregate_mock.assert_called_once_with(
+            [
+                {"$match": cond},
+                {
+                    "$group": {
+                        '_id': "$document_id",
+                        'deltas': {"$push": "$$ROOT"},
+                    }
+                },
+            ],
+            allowDiskUse=True,
         )
 
     @patch.object(pymongo.collection.Collection, 'aggregate')
@@ -917,16 +992,24 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
 
         self.col.get_delta_documents_in_path(path)
 
-        cond = {"$or": [
-            {'collection_version_id': 1, 'branch': 'm'},
-            {'collection_version_id': 0, 'branch': 'm'},
-            {'collection_version_id': 1, 'branch': 'b'},
-        ]}
-        aggregate_mock.assert_called_once_with([
-            {"$match": cond},
-            {"$group": {'_id': "$document_id", 'deltas': {"$push": "$$ROOT"}}}
-        ],
-            allowDiskUse=True
+        cond = {
+            "$or": [
+                {'collection_version_id': 1, 'branch': 'm'},
+                {'collection_version_id': 0, 'branch': 'm'},
+                {'collection_version_id': 1, 'branch': 'b'},
+            ]
+        }
+        aggregate_mock.assert_called_once_with(
+            [
+                {"$match": cond},
+                {
+                    "$group": {
+                        '_id': "$document_id",
+                        'deltas': {"$push": "$$ROOT"},
+                    }
+                },
+            ],
+            allowDiskUse=True,
         )
 
     def _setup(self):
@@ -1014,7 +1097,10 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             next=[],
         )
         delta_docs[self.doc['_id']] = {
-            '1_m': d1_1_m, '2_m': d1_2_m, '3_m': d1_3_m, '0_b': d1_0_b
+            '1_m': d1_1_m,
+            '2_m': d1_2_m,
+            '3_m': d1_3_m,
+            '0_b': d1_0_b,
         }
         deep_deltas[self.doc['_id']] = d1_deltas
 
@@ -1074,7 +1160,9 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             next=[],
         )
         delta_docs[self.doc2['_id']] = {
-            '1_m': d2_1_m, '3_m': d2_3_m, '0_c': d2_0_c
+            '1_m': d2_1_m,
+            '3_m': d2_3_m,
+            '0_c': d2_0_c,
         }
         deep_deltas[self.doc2['_id']] = d2_deltas
 
@@ -1115,13 +1203,14 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         doc_2_id = self.doc2['_id']
 
         aggregate_mock.return_value = [
-            {'_id': doc_1_id,
-             'deltas': [
-                 delta_docs[doc_1_id]['2_m'], delta_docs[doc_1_id]['3_m']
-             ]},
-            {'_id': doc_2_id,
-             'deltas': [delta_docs[doc_2_id]['3_m']]
-             }
+            {
+                '_id': doc_1_id,
+                'deltas': [
+                    delta_docs[doc_1_id]['2_m'],
+                    delta_docs[doc_1_id]['3_m'],
+                ],
+            },
+            {'_id': doc_2_id, 'deltas': [delta_docs[doc_2_id]['3_m']]},
         ]
         path = {(1, 'main'): 1, (2, 'main'): 1, (3, 'main'): 1}
         deltas = self.col.get_deltas(path)
@@ -1145,11 +1234,8 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         doc_2_id = self.doc2['_id']
 
         aggregate_mock.return_value = [
-            {'_id': doc_1_id,
-             'deltas': [delta_docs[doc_1_id]['3_m']]},
-            {'_id': doc_2_id,
-             'deltas': [delta_docs[doc_2_id]['3_m']]
-             }
+            {'_id': doc_1_id, 'deltas': [delta_docs[doc_1_id]['3_m']]},
+            {'_id': doc_2_id, 'deltas': [delta_docs[doc_2_id]['3_m']]},
         ]
         path = {(3, 'main'): -1, (2, 'main'): -1}
         deltas = self.col.get_deltas(path)
@@ -1171,13 +1257,16 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         doc_1_id = self.doc['_id']
         doc_2_id = self.doc2['_id']
 
-        aggregate_mock.return_value = [{
-            '_id': doc_1_id,
-            'deltas': list(delta_docs[doc_1_id].values())
-        }, {
-            '_id': doc_2_id,
-            'deltas': [delta_docs[doc_2_id]['3_m'], delta_docs[doc_2_id]['1_m']]
-        }]
+        aggregate_mock.return_value = [
+            {'_id': doc_1_id, 'deltas': list(delta_docs[doc_1_id].values())},
+            {
+                '_id': doc_2_id,
+                'deltas': [
+                    delta_docs[doc_2_id]['3_m'],
+                    delta_docs[doc_2_id]['1_m'],
+                ],
+            },
+        ]
 
         path = {(3, 'main'): -1, (2, 'main'): -1, (1, 'main'): 0, (0, 'b'): 1}
         deltas = self.col.get_deltas(path)
@@ -1201,21 +1290,24 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
         doc_1_id = self.doc['_id']
         doc_2_id = self.doc2['_id']
 
-        aggregate_mock.return_value = [{
-            '_id': doc_1_id,
-            'deltas': [
-                delta_docs[doc_1_id]['3_m'],
-                delta_docs[doc_1_id]['2_m'],
-                delta_docs[doc_1_id]['1_m'],
-            ]
-        }, {
-            '_id': doc_2_id,
-            'deltas': [
-                delta_docs[doc_2_id]['3_m'],
-                delta_docs[doc_2_id]['1_m'],
-                delta_docs[doc_2_id]['0_c'],
-            ]
-        }]
+        aggregate_mock.return_value = [
+            {
+                '_id': doc_1_id,
+                'deltas': [
+                    delta_docs[doc_1_id]['3_m'],
+                    delta_docs[doc_1_id]['2_m'],
+                    delta_docs[doc_1_id]['1_m'],
+                ],
+            },
+            {
+                '_id': doc_2_id,
+                'deltas': [
+                    delta_docs[doc_2_id]['3_m'],
+                    delta_docs[doc_2_id]['1_m'],
+                    delta_docs[doc_2_id]['0_c'],
+                ],
+            },
+        ]
 
         path = {
             (3, 'main'): -1,
@@ -1240,3 +1332,26 @@ class TestDeltasCollectionUnitTests(InMemoryDatabaseSetup):
             deep_deltas[doc_2_id]['0_c']['f'],
         ]
         self.assertEqualDeltaLists(doc_2_deltas, deltas[doc_2_id])
+
+    def test_apply_deltas(self):
+        _, deep_deltas = self._setup()
+        doc_id = self.doc['_id']
+
+        doc1_deltas = deep_deltas[doc_id]
+        f_deltas = [doc1_deltas[v]['f'] for v in ['1_m', '2_m', '3_m']]
+        b_deltas = [doc1_deltas[v]['b'] for v in ['3_m', '2_m', '1_m']]
+
+        doc_v3_expected = deepcopy(self.doc)
+        doc_v3_expected['v'] = 2
+        result = self.col.apply_deltas(
+            per_document_deltas={doc_id: f_deltas}, documents=[self.doc]
+        )
+        self.assertEqual(doc_v3_expected, result[doc_id])
+
+        updated, original = self.col.apply_deltas(
+            per_document_deltas={doc_id: b_deltas},
+            documents=[doc_v3_expected],
+            return_current_documents=True,
+        )
+        self.assertEqual(doc_v3_expected, original[doc_id])
+        self.assertEqual(dict(), updated[doc_id])

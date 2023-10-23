@@ -13,6 +13,7 @@ from versioned_collection.collection.tracking_collections import (
 
 class ModifiedTracker(TypedDict):
     """Representation for a modified document and its list of trackers."""
+
     _id: ObjectId
     tracker_ids: List[ObjectId]
 
@@ -84,22 +85,35 @@ class ModifiedCollection(_BaseTrackerCollection):
             inserts, ``'d'`` for deletes and ``'u'`` for updates and
             replacements.
         """
-        docs = list(self.aggregate([
-            {"$group": {'_id': "$op", 'ids': {"$addToSet": "$id"}}},
-            {"$replaceRoot": {
-                'newRoot': {"$arrayToObject": [[{'k': "$_id", 'v': "$ids"}]]}
-            }},
-            # merge the results into a single document
-            {"$group": {'_id': 0, 'aggregated_ops': {"$push": "$$ROOT"}}},
-            {"$replaceRoot": {
-                'newRoot': {"$mergeObjects": "$aggregated_ops"}
-            }},
-            {"$project": {'_id': False}}
-        ]))
+        docs = list(
+            self.aggregate([
+                {"$group": {'_id': "$op", 'ids': {"$addToSet": "$id"}}},
+                {
+                    "$replaceRoot": {
+                        'newRoot': {
+                            "$arrayToObject": [[{'k': "$_id", 'v': "$ids"}]]
+                        }
+                    }
+                },
+                # merge the results into a single document
+                {
+                    "$group": {
+                        '_id': 0,
+                        'aggregated_ops': {"$push": "$$ROOT"},
+                    }
+                },
+                {
+                    "$replaceRoot": {
+                        'newRoot': {"$mergeObjects": "$aggregated_ops"}
+                    }
+                },
+                {"$project": {'_id': False}},
+            ])
+        )
         return dict() if len(docs) == 0 else docs[0]
 
     def get_unique_modified_document_ids(self) -> List[ObjectId]:
-        """Get the unique ids of the modified documents. """
+        """Get the unique ids of the modified documents."""
         result = self.aggregate([
             {"$group": {'_id': 0, 'ids': {"$addToSet": "$id"}}},
         ])

@@ -472,7 +472,8 @@ class LogsCollection(_BaseTrackerCollection):
 
             if prev_tree_node is None:
                 raise InvalidCollectionVersion(
-                    previous_version, previous_branch,
+                    previous_version,
+                    previous_branch,
                 )
 
             previous_id = prev_tree_node.tag

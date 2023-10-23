@@ -5,20 +5,20 @@ import pymongo.collection
 from bson import ObjectId
 
 from tests.test_tracking_collection.in_memory_database import (
-    InMemoryDatabaseSetup, build_and_destroy_collection
+    InMemoryDatabaseSetup,
+    build_and_destroy_collection,
 )
-from versioned_collection.collection.tracking_collections import \
-    ModifiedCollection
+from versioned_collection.collection.tracking_collections import ModifiedCollection
 
 
 class TestModifiedCollection(InMemoryDatabaseSetup):
+
     def setUp(self) -> None:
         self.collection = ModifiedCollection(self.database, 'col')
 
     def test_has_changes_is_false_when_no_documents_in_collection(self):
         with patch.object(
-            pymongo.collection.Collection,
-            'count_documents'
+            pymongo.collection.Collection, 'count_documents'
         ) as mock:
             mock.return_value = 0
             self.assertFalse(self.collection.has_changes())
@@ -26,8 +26,7 @@ class TestModifiedCollection(InMemoryDatabaseSetup):
 
     def test_collection_has_changes_if_any_at_least_one_doc_in_collection(self):
         with patch.object(
-            pymongo.collection.Collection,
-            'count_documents'
+            pymongo.collection.Collection, 'count_documents'
         ) as mock:
             mock.return_value = 1
             self.assertTrue(self.collection.has_changes())
@@ -38,11 +37,7 @@ class TestModifiedCollection(InMemoryDatabaseSetup):
     def test_get_modified_trackers_for_a_document_with_a_single_tracker(self):
         doc_id = ObjectId()
         tracker_id = ObjectId()
-        mod = ModifiedCollection.SCHEMA(
-            _id=tracker_id,
-            id=doc_id,
-            op='i'
-        )
+        mod = ModifiedCollection.SCHEMA(_id=tracker_id, id=doc_id, op='i')
         self.collection.insert_one(mod.__dict__)
 
         docs = self.collection.get_modified_trackers()
@@ -92,12 +87,15 @@ class TestModifiedCollection(InMemoryDatabaseSetup):
 
         expected = [
             {'_id': doc_id_1, 'tracker_ids': [tracker_1_1._id]},
-            {'_id': doc_id_2, 'tracker_ids': [tracker_2_1._id, tracker_2_2._id]}
+            {
+                '_id': doc_id_2,
+                'tracker_ids': [tracker_2_1._id, tracker_2_2._id],
+            },
         ]
 
-        self.collection.insert_many([
-            tracker_1_1.__dict__, tracker_2_1.__dict__, tracker_2_2.__dict__
-        ])
+        self.collection.insert_many(
+            [tracker_1_1.__dict__, tracker_2_1.__dict__, tracker_2_2.__dict__]
+        )
 
         docs = self.collection.get_modified_trackers()
         self.assertEqual(2, len(docs))

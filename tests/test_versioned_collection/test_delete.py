@@ -1,4 +1,3 @@
-
 from tests.test_versioned_collection.common import _BaseTest
 
 
