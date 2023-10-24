@@ -66,7 +66,7 @@ def build(session: nox.Session):
 @nox.session(python=False)
 @nox.parametrize(
     'docs_format',
-    ['html', 'xml', 'epub', 'dirhtml', 'man', 'text', 'latex', ''],
+    ['html'],
 )
 def docs(session: nox.Session, docs_format: str = 'html'):
     session.run("pip", "install", "-r", "docs/requirements.txt")
