@@ -131,7 +131,14 @@ class LogsCollection(_BaseTrackerCollection):
         return self._log_tree
 
     def _load_log_tree(self) -> None:
-        """Build and loads the log tree into memory."""
+        """Build and loads the log tree into memory.
+
+        :raises InvalidCollectionState: When:
+            - No root version is found;
+            - The log contains cycles;
+            - Missing parent version even if recorded in child.
+
+        """
         log_entries = {e['_id']: e for e in self.find({})}
         # find the root
         root = None
@@ -339,7 +346,6 @@ class LogsCollection(_BaseTrackerCollection):
             If the two versions are on different branches with a common
             ancestor, then the direction at that node is ``0``.
         """
-
         if current == target:
             # The versions are the same, so there is no path.
             return dict()
@@ -689,7 +695,6 @@ class LogsCollection(_BaseTrackerCollection):
         :param version: The versions at which the new branch should start.
         :param new_branch: The name of the new branch.
         """
-
         if version == (0, "main"):
             raise ValueError("Cannot rebranch the root of the version tree.")
 
@@ -727,7 +732,12 @@ class LogsCollection(_BaseTrackerCollection):
         )
 
     def delete_subtree(self, version: Tuple[int, str]) -> None:
-        """Delete the subtree of the version tree rooted in `version`."""
+        """Delete the subtree of the version tree rooted in `version`.
+
+        :raises InvalidCollectionVersion: If `version` does not exist.
+
+        :param version: The root version of the subtree to delete.
+        """
         if version == (0, 'main'):
             self.reset()
             return
