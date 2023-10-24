@@ -1,6 +1,4 @@
-.. _tracking-collections:
-
-versioned_collection.collection.tracking_collections
+versioned\_collection.collection.tracking\_collections package
 ==============================================================
 
 .. automodule:: versioned_collection.collection.tracking_collections
@@ -14,6 +12,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   versioned_collection.collection.tracking_collections.base
    versioned_collection.collection.tracking_collections.branches
    versioned_collection.collection.tracking_collections.conflicts
    versioned_collection.collection.tracking_collections.deltas

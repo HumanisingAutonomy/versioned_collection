@@ -54,7 +54,7 @@ class LockCollection(Collection):
         """Try to acquire the lock for the given collection.
 
         :return: ``True`` if the lock is successfully acquired, ``False`` if
-            the lock is held by other process.
+            the lock is held by another process.
         """
         ret = self.find_one_and_update(
             filter={'collection_name': collection, 'locked': False},

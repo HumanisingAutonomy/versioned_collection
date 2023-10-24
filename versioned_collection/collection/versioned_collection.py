@@ -5,7 +5,7 @@ import os
 import subprocess
 import warnings
 from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
+from copy import deepcopy, copy
 from functools import partial, wraps
 from multiprocessing import cpu_count, Pool
 from shutil import rmtree
@@ -620,7 +620,7 @@ class VersionedCollection(Collection):
         )
 
     @_synchronize
-    def create_branch(self, branch_name: str) -> Tuple[int, str]:
+    def create_branch(self, branch_name: str) -> Optional[Tuple[int, str]]:
         """Create a branch with the given name and checks out to it.
 
         When creating a new branch changes are allowed to exist since the
@@ -654,8 +654,12 @@ class VersionedCollection(Collection):
         :param branch_name: The name of the new branch. Can be any string,
             but it cannot start with double underscore (``__``).
         :return: The version id and branch name of the version the new branch
-            points to, i.e., the previous position of the head.
+            points to, i.e., the previous position of the head, if the
+            collection is initialised for versioning, ``None`` otherwise.
         """
+        if not self.is_tracked():
+            return None
+
         if branch_name.startswith('__'):
             raise ValueError("Branch names cannot start with '__'")
 
@@ -671,7 +675,6 @@ class VersionedCollection(Collection):
                 curr_branch = curr.points_to_branch
             curr_version = curr.points_to_collection_version
 
-        # Create the new branch
         self._branches_collection.create_branch(
             branch=branch_name,
             pointing_to_collection_version=curr_version,
@@ -680,7 +683,6 @@ class VersionedCollection(Collection):
         prev_version = curr_version
         prev_branch = curr_branch
 
-        # Update the metadata
         self._current_version = -1
         self._current_branch = branch_name
         self._meta_collection.set_metadata(
@@ -763,7 +765,7 @@ class VersionedCollection(Collection):
         logs = [(log.version, log.branch) for log in logs]
 
         modified_tracker_docs = (
-            self._modified_collection.find_modified_documents_ids()
+            self._modified_collection.get_modified_trackers()
         )
 
         if len(modified_tracker_docs) == 0:
@@ -799,7 +801,7 @@ class VersionedCollection(Collection):
 
             # Make sure that all the changes are grabbed
             modified_tracker_docs = (
-                self._modified_collection.find_modified_documents_ids()
+                self._modified_collection.get_modified_trackers()
             )
 
         if not has_registered_deltas:
@@ -809,7 +811,6 @@ class VersionedCollection(Collection):
         # Update the tracking information for the newly registered version
         self._current_version += 1
 
-        # Update the metadata
         self._meta_collection.set_metadata(
             current_version=self._current_version,
             current_branch=self._current_branch,
@@ -819,14 +820,12 @@ class VersionedCollection(Collection):
 
         self._clear_changes()
 
-        # Update the branch pointer
         self._branches_collection.update_branch(
             branch=self._current_branch,
             pointing_to_collection_version=self._current_version,
             pointing_to_branch=self._current_branch,
         )
 
-        # Create a log entry
         self._log_collection.add_log_entry(
             previous_version=previous_version,
             previous_branch=previous_branch,
@@ -835,7 +834,6 @@ class VersionedCollection(Collection):
             timestamp=now,
         )
 
-        # Create the snapshot
         self._replica_collection.create_snapshot()
 
         assert self._modified_collection.count_documents({}) == 0
@@ -861,8 +859,7 @@ class VersionedCollection(Collection):
         :param modified_tracker_docs: A list of documents containing
             the ids of the modified documents and the ids of the trackers.
         :param logs:  A list containing (version, branch) tuples from the
-            current version (the version that is about to be registered)
-            to the root of the version tree.
+            previous version to the root of the version tree.
         :param coll_name: The name of this collection.
         :param branch: The name of the current branch.
         :param version: The version number used to register the new version.
@@ -901,7 +898,6 @@ class VersionedCollection(Collection):
             # If not found it was deleted since last version
             this_doc = {} if this_doc is None else this_doc
 
-            # Generate and store the deltas
             res = deltas_collection.add_delta(
                 document_old=replica_doc,
                 document_new=this_doc,
@@ -914,7 +910,6 @@ class VersionedCollection(Collection):
             tracker_ids.extend(tracker_doc['tracker_ids'])
             has_registered_deltas = has_registered_deltas or res is not None
 
-        # Remove the processed documents
         modified_collection.delete_modified(tracker_ids)
         return has_registered_deltas
 
@@ -998,7 +993,14 @@ class VersionedCollection(Collection):
 
         if self._current_version == -1:
             if version == 0 and branch == self._current_branch:
-                raise InvalidCollectionVersion(version, branch)
+                err_message = (
+                    "You tried to checkout to an nonexistent version of the "
+                    "target tracked collection. The version identified by "
+                    "(version_id: {}, branch: {}) does not exist."
+                )
+                raise InvalidCollectionVersion(
+                    version=version, branch=branch, message=err_message
+                )
 
             # The current branch is empty, i.e., there are no versions
             # registered on it. Move the HEAD to the base branch and continue
@@ -1065,10 +1067,8 @@ class VersionedCollection(Collection):
         with ThreadPoolExecutor(max_workers=cpu_count()) as executor:
             executor.map(process_doc, documents)
 
-        # Restart listening to this collection
         self._listener.start()
 
-        # Set the current version to be the checked out version.
         self._current_version = destination_version
         self._current_branch = destination_branch
 
@@ -1080,7 +1080,6 @@ class VersionedCollection(Collection):
             and branch_data.points_to_collection_version == destination_version
         )
 
-        # Update the metadata
         self._meta_collection.set_metadata(
             current_version=self._current_version,
             current_branch=self._current_branch,
@@ -1129,7 +1128,6 @@ class VersionedCollection(Collection):
             current=current_version, target=target_version
         )
 
-        # Compute the deltas
         per_document_deltas = self._deltas_collection.get_deltas(path=path)
 
         if len(per_document_deltas) == 0:
@@ -1139,14 +1137,15 @@ class VersionedCollection(Collection):
                 "registered. You'd better have a backup, amigo!"
             )
 
-        # Get the documents that have to be updated
         if current_source is None:
             current_source = self
 
+        per_document_deltas = {
+            k: v for k, v in per_document_deltas.items() if len(v)
+        }
         doc_ids = list(per_document_deltas.keys())
         current_documents = list(current_source.find({'_id': {'$in': doc_ids}}))
 
-        # Get the updated documents
         documents, current_documents = self._deltas_collection.apply_deltas(
             per_document_deltas=per_document_deltas,
             documents=current_documents,
@@ -1252,6 +1251,7 @@ class VersionedCollection(Collection):
             return False
 
         if self.has_changes():
+            # TODO: allow this after improving the merging functionality?
             raise InvalidOperation(
                 "Cannot apply stashed data because the collection has changes."
                 "Either register a new version or discard the current changes "
@@ -1494,7 +1494,7 @@ class VersionedCollection(Collection):
             if not self.has_changes():
                 return dict()
 
-        mod_ids = self._modified_collection.find_modified_documents_ids()
+        mod_ids = self._modified_collection.get_modified_trackers()
         mod_ids = [doc['_id'] for doc in mod_ids]
         if version is None and branch is None:
             # The other documents are in the replica collection
@@ -1656,7 +1656,7 @@ class VersionedCollection(Collection):
     def status(self) -> Dict[str, Union[str, bool, int]]:
         """Return the status of this collection."""
         if self._tracked:
-            return self._meta_collection.metadata.__dict__
+            return copy(self._meta_collection.metadata.__dict__)
         else:
             return {'tracked': False}
 
@@ -2384,23 +2384,19 @@ class VersionedCollection(Collection):
         )
         new_name = f"{new_name}_{next_branch_id}"
 
-        # Update the log
         self._log_collection.rebranch(
             version=(version, branch), new_branch=new_name
         )
-        # Update the deltas
         self._deltas_collection.rebranch(
             start_version=(version, branch),
             new_branch=new_name,
             num_versions=num_versions_to_rebranch,
         )
-        # Change the branch pointer
         self._branches_collection.update_branch(
             branch=branch,
             pointing_to_collection_version=version - 1,
             pointing_to_branch=branch,
         )
-        # Add the new branch
         self._branches_collection.create_branch(
             branch=new_name,
             pointing_to_collection_version=num_versions_to_rebranch - 1,
@@ -2415,7 +2411,6 @@ class VersionedCollection(Collection):
                 ),
                 pointing_to_branch=new_name,
             )
-        # Update the HEAD pointer
         if self.branch == branch:
             self._current_branch = new_name
             self._current_version -= version
@@ -2585,7 +2580,7 @@ class VersionedCollection(Collection):
             )
         ]
 
-        leaves = self._log_collection.get_branch_tips_versions(version_id)
+        leaves = self._log_collection.get_versions_of_branch_tips(version_id)
         for _, leaf_branch in leaves:
             if leaf_branch != branch:
                 branches_to_delete.append(leaf_branch)

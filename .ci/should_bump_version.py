@@ -10,7 +10,10 @@ def get_args():
 
 def main():
     to_ignore = (
-        'VERSION', '.github/', '.ci/', 'versioned_collection/version.py'
+        'VERSION',
+        '.github/',
+        '.ci/',
+        'versioned_collection/version.py',
     )
     should_bump = not all(
         [file.startswith(to_ignore) for file in get_args().files]

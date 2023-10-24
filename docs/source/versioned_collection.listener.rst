@@ -1,4 +1,4 @@
-versioned\_collection.listener
+versioned\_collection.listener module
 =====================================
 
 .. automodule:: versioned_collection.listener

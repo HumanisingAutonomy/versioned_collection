@@ -56,7 +56,7 @@ class StashContainer:
         self.main_collection.rename(new_name, *args, **kwargs)
         self.modified_collection.rename(f'modified_{new_name}', *args, **kwargs)
 
-    def exists(self):
+    def exists(self) -> bool:
         main_exists = self.main_collection.exists()
         modified_exists = self.modified_collection.exists()
         assert main_exists == modified_exists
@@ -85,7 +85,7 @@ class StashContainer:
         modified_collection.aggregate(
             [{"$match": {}}, {"$out": self.modified_collection.name}]
         )
-        ids = list({doc['id'] for doc in modified_collection.find()})
+        ids = modified_collection.get_unique_modified_document_ids()
         main_collection.aggregate([
             {"$match": {'_id': {"$in": ids}}},
             {"$out": self.main_collection.name},
@@ -102,9 +102,15 @@ class StashContainer:
         :param modified_collection: The collection that tracks the ids of the
             modified documents, i.e., ``__modified_<tracked_collection_name>``.
         """
-        ids = list({doc['id'] for doc in self.modified_collection.find()})
+        ids = next(
+            self.modified_collection.aggregate([
+                {"$group": {'_id': 0, 'ids': {"$addToSet": "$id"}}},
+            ])
+        )['ids']
+
         existing_ids = main_collection.find(
-            {'_id': {"$in": ids}}, projection={'_id': True}
+            {'_id': {"$in": ids}},
+            projection={'_id': True},
         )
         existing_ids = [d['_id'] for d in existing_ids]
         if len(existing_ids):

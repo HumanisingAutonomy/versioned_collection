@@ -20,7 +20,9 @@ def main():
     version = fetch_version()
 
     if 'VC_DEV_BUILD' in os.environ:
-        version = f"{version}+nightly{datetime.datetime.now().strftime('%d%m%y')}"
+        version = (
+            f"{version}+nightly{datetime.datetime.now().strftime('%d%m%y')}"
+        )
 
     setup(version=version)
 

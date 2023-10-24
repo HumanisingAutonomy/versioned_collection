@@ -69,6 +69,7 @@ def generate_pagination_query(
             {'_id': {sort_operator: last_key['_id']}},
         ]},
     ]
+    # fmt: on
 
     if '$or' not in paginated_query:
         paginated_query['$or'] = pagination_query

@@ -6,11 +6,18 @@ versioned\_collection package
    :undoc-members:
    :show-inheritance:
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   versioned_collection.collection
+
 Submodules
 ----------
 
 .. toctree::
    :maxdepth: 4
 
-   versioned_collection.errors
-   versioned_collection.listener
+   versioned_collection.tree

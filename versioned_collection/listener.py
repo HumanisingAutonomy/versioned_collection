@@ -79,6 +79,13 @@ class CollectionListener:
         operations are performed and the database queues the operations to be
         performed.
         """
+        # TODO: Stop the listener without killing the process.
+        #   Here we have only to stop the change stream and ignore any
+        #   upcoming events for the duration the listener was paused.
+        #   This should basically record the cluster time when stop was called,
+        #   and ignore all the events that happen after that time and before
+        #   the time the listener is resumed.
+
         if not self.is_listening():
             return
 

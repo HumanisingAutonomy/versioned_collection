@@ -217,15 +217,14 @@ To build documentation in various formats, you will need
 [Sphinx](https://www.sphinx-doc.org/en/master/):
 
 ```bash
-pip install -r docs/requirements.txt
-./scripts/build_docs.sh
+nox -s docs
 ```
 
 This will build the documentation in html format. If other formats are
 preferred, run
 
 ```bash
-./scripts/build_docs.sh <format>
+nox -s "docs(docs_format='<format>')"
 ```
 </details>
 
