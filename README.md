@@ -229,6 +229,7 @@ nox -s "docs(docs_format='<format>')"
 </details>
 
 
+
 ## Additional resources
 
 For more comprehensive examples check the following resources:
