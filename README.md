@@ -237,8 +237,8 @@ For more comprehensive examples check the following resources:
 - [Basic usage tutorial](https://scaling-adventure-g3g7qpg.pages.github.io/tutorials/basics.html)
 - [Notes on CLI](https://scaling-adventure-g3g7qpg.pages.github.io/command_line.html)
 - [Implementation details](https://scaling-adventure-g3g7qpg.pages.github.io/notes/internals.html) for a more in-depth
-  description of the internal workings of this library.
-- [Advanced notes on the versioning system](https://scaling-adventure-g3g7qpg.pages.github.io/notes/versioning_system.html#).
+  description of the internal workings of this library
+- [Advanced notes on the versioning system](https://scaling-adventure-g3g7qpg.pages.github.io/notes/versioning_system.html#)
 
 
 

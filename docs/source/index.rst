@@ -18,10 +18,10 @@ remote and local collections by pushing and pulling the changes between them.
    :maxdepth: 1
    :caption: Python API
 
-   versioned_collection.collection.versioned_collection
-   versioned_collection.collection.tracking_collections
-   versioned_collection.errors
-   versioned_collection.listener
+   Versioned Collection <versioned_collection.collection.versioned_collection>
+   Tracking Collection <versioned_collection.collection.tracking_collections>
+   Errors <versioned_collection.errors>
+   Listener <versioned_collection.listener>
 
 .. toctree::
    :maxdepth: 1

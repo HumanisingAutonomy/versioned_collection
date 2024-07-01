@@ -115,7 +115,7 @@ class VersionedCollection(Collection):
         temporary collection.
 
     To enable versioning on a collection, create a class that inherits
-    from :class:`VersionedCollection`, or create a :class:`VersionedCollection`
+    from `VersionedCollection`, or create a :class:`VersionedCollection`
     object and pass the name of the collection as well.
 
     Usage example:
@@ -205,7 +205,7 @@ class VersionedCollection(Collection):
             [b.name for b in self._branches_collection.get_empty_branches()]
         )
         branches_hash = hash('__'.join(branches))
-        return hash((self.name, branches_hash, self.versiontree))
+        return hash((self.name, branches_hash, self.version_tree))
 
     def __eq__(self, other: object) -> bool:
         """Check for equality.
@@ -1225,7 +1225,7 @@ class VersionedCollection(Collection):
 
         .. warning::
             Applying the stashed changes will overwrite the existing
-            dococuments.
+            documents.
 
         .. code-block:: python
 
@@ -1670,7 +1670,7 @@ class VersionedCollection(Collection):
         return (
             self._branches_collection.get_branch_names()
             if self._tracked
-            else []
+            else set()
         )
 
     @_synchronize
@@ -1711,7 +1711,7 @@ class VersionedCollection(Collection):
             - If the remote branch has changes that are not present on the
               local branch;
             - If the remote collection is not initialised;
-             - If the local collection has more than one version registered,
+            - If the local collection has more than one version registered,
                the local collection has data into the stash area and the
                local collection has unregistered changes.
 

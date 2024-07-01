@@ -500,7 +500,7 @@ class DeltasCollection(_BaseTrackerCollection):
             delta documents.
         :param sorting_order: The order in which to sort the delta documents by
             timestamp. ``1`` means ascending and ``-1`` means descending.
-             If omitted, the sorting step is skipped.
+            If omitted, the sorting step is skipped.
         :return: The delta documents.
         """
         versions = list(path.keys())
