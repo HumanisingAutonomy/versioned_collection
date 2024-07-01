@@ -57,6 +57,6 @@ class _BaseTrackerCollection(Collection):
         """
         if self.exists():
             name = self.format_name(parent_collection_name)
-            super().rename(new_name=name, *args, **kwargs)
+            super().rename(*args, new_name=name, **kwargs)
             return True
         return False

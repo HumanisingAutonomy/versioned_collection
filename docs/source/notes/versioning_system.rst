@@ -10,7 +10,6 @@ We will analyse the data structures built from the data stored in the auxiliary
 collections and illustrate with examples how they interact with the main
 tracked collection.
 
-.. contents:: Contents
 
 The Version Tree
 ------------------
@@ -40,14 +39,14 @@ Before doing that, let us create a new database with structure presented in
 :numref:`log-tree`, and consider that the collection has three documents:
 
     *  :math:`\mathcal D_1` that is modified in each version of the collection,
-       except in :math:`\texttt{1_b}`
-    *  :math:`\mathcal D_2`, that is inserted in :math:`\texttt{1_m}`, and
-       modified in :math:`\texttt{2_m}` and in :math:`\texttt{1_b}`
-    *  :math:`\mathcal D_3` that was inserted once in :math:`\texttt{2_m}` on
-       the ``main`` branch and once in :math:`\texttt{1_b}`, on the ``b``
+       except in :math:`\texttt{1\_b}`
+    *  :math:`\mathcal D_2`, that is inserted in :math:`\texttt{1\_m}`, and
+       modified in :math:`\texttt{2\_m}` and in :math:`\texttt{1\_b}`
+    *  :math:`\mathcal D_3` that was inserted once in :math:`\texttt{2\_m}` on
+       the ``main`` branch and once in :math:`\texttt{1\_b}`, on the ``b``
        branch.
 
-As a notation, the tags :math:`\texttt{0_m}`, :math:`\texttt{1_b}`, etc,
+As a notation, the tags :math:`\texttt{0\_m}`, :math:`\texttt{1\_b}`, etc,
 written inside of each node represent a quicker way of referring to the
 versions ``(0, 'main')``, ``(1, 'b')`` and so on.
 
@@ -146,7 +145,7 @@ branch will be ``0``.
 
 In ``versioned_collection`` branches are pointers to the version nodes of the
 log tree, as shown in :numref:`log-tree-branches`. Here, we are checked out at
-version :math:`\texttt{3_m}` (remember that this is just notation for
+version :math:`\texttt{3\_m}` (remember that this is just notation for
 ``(3, 'main')``), so the ``HEAD`` pointer, represented by the metadata
 collection points to that version, the ``'main'`` branch pointer points to the
 latest version on the ``'main'`` branch and the ``'b'`` branch pointer
@@ -205,8 +204,8 @@ the tree, and the successors of a version node are all node that are part of
 the subtree of :math:`\mathcal L` rooted in the given version, excluding that
 version.
 For example, using the data in :numref:`log-tree-branches`, we have that
-:math:`succ(\texttt{2_m}) = \{ \texttt{3_m}, \texttt{4_m} \}` and
-:math:`pred(\texttt{0_b}) = \{ \texttt{1_m}, \texttt{0_m} \}`.
+:math:`succ(\texttt{2\_m}) = \{ \texttt{3\_m}, \texttt{4\_m} \}` and
+:math:`pred(\texttt{0\_b}) = \{ \texttt{1\_m}, \texttt{0\_m} \}`.
 
 One useful notion from trees that automatically extends to log trees is the
 idea of lowest common ancestor of two nodes in the tree. This can be written
@@ -307,18 +306,18 @@ registered for a document are related.
 If we look at the deltas corresponding to a single document, we notice that they
 form a tree structure. For instance, for document :math:`\mathcal D_1`, we
 notice that it was modified in all versions in
-:math:`succ(\texttt{0_m}) \setminus \{ \texttt{1_b} \}`. If we want to go
-from version :math:`\texttt{0_m}` to version :math:`\texttt{4_m}`, we'll have
+:math:`succ(\texttt{0\_m}) \setminus \{ \texttt{1\_b} \}`. If we want to go
+from version :math:`\texttt{0\_m}` to version :math:`\texttt{4\_m}`, we'll have
 to iteratively apply the deltas registered for the ``'main'`` branch starting
 with
-:math:`\delta_{\texttt{1_m}}^{\mathcal D_1}`, then apply
-:math:`\delta_{\texttt{2_m}}^{\mathcal D_1}` and so on up to (and including)
-:math:`\delta_{\texttt{4_m}}^{\mathcal D_1}`. Similarly, if we are at version
-:math:`\texttt{0_m}` and want to go to version :math:`\texttt{1_b}`,
+:math:`\delta_{\texttt{1\_m}}^{\mathcal D_1}`, then apply
+:math:`\delta_{\texttt{2\_m}}^{\mathcal D_1}` and so on up to (and including)
+:math:`\delta_{\texttt{4\_m}}^{\mathcal D_1}`. Similarly, if we are at version
+:math:`\texttt{0\_m}` and want to go to version :math:`\texttt{1\_b}`,
 we'll have to apply
-:math:`\delta_{\texttt{1_m}}^{\mathcal D_1}`,
-:math:`\delta_{\texttt{0_b}}^{\mathcal D_1}` and
-:math:`\delta_{\texttt{1_b}}^{\mathcal D_1}` in order. We notice how this
+:math:`\delta_{\texttt{1\_m}}^{\mathcal D_1}`,
+:math:`\delta_{\texttt{0\_b}}^{\mathcal D_1}` and
+:math:`\delta_{\texttt{1\_b}}^{\mathcal D_1}` in order. We notice how this
 induces a tree structure on the deltas, which we will call the document delta
 tree or per-document delta tree, where the deltas, which are the transitions
 between versions, become nodes.
@@ -336,21 +335,21 @@ between versions, become nodes.
 In addition to that, we observe how this document delta tree is `sparser`
 than the log tree (see :numref:`delta-tree-nodes`).
 For :math:`\mathcal D_1`, there is no delta between
-versions  :math:`\texttt{0_b}` and  :math:`\texttt{1_b}`, and for
-:math:`\mathcal D_3` we only have two deltas: one between :math:`\texttt{1_m}`
-and  :math:`\texttt{2_m}` and the other one between  :math:`\texttt{0_b}` and
-:math:`\texttt{1_b}`. These deltas are trees on their own (trees with a
+versions  :math:`\texttt{0\_b}` and  :math:`\texttt{1\_b}`, and for
+:math:`\mathcal D_3` we only have two deltas: one between :math:`\texttt{1\_m}`
+and  :math:`\texttt{2\_m}` and the other one between  :math:`\texttt{0\_b}` and
+:math:`\texttt{1\_b}`. These deltas are trees on their own (trees with a
 single node), but they are not connected.
 If :math:`\mathcal D_3` had been modified, for instance, between
-:math:`\texttt{3_m}` and  :math:`\texttt{4_m}`, then a new delta
-:math:`\delta_{\texttt{4_m}}^{\mathcal D_3}` would have been
+:math:`\texttt{3\_m}` and  :math:`\texttt{4\_m}`, then a new delta
+:math:`\delta_{\texttt{4\_m}}^{\mathcal D_3}` would have been
 registered between those versions, and
-:math:`\delta_{\texttt{2_m}}^{\mathcal D_3}` and
-:math:`\delta_{\texttt{4_m}}^{\mathcal D_3}` would have formed a tree. Again
+:math:`\delta_{\texttt{2\_m}}^{\mathcal D_3}` and
+:math:`\delta_{\texttt{4\_m}}^{\mathcal D_3}` would have formed a tree. Again
 that tree would be sparser, since it `jumps over` version
-:math:`\texttt{3_m}`, meaning that the version of :math:`\mathcal D_3` in
-:math:`\texttt{2_m}` and  :math:`\texttt{3_m}` stays the same and it is
-modified only when the collection changes its state to :math:`\texttt{4_m}`.
+:math:`\texttt{3\_m}`, meaning that the version of :math:`\mathcal D_3` in
+:math:`\texttt{2\_m}` and  :math:`\texttt{3\_m}` stays the same and it is
+modified only when the collection changes its state to :math:`\texttt{4\_m}`.
 
 
 We know that all deltas
@@ -433,11 +432,11 @@ Note that :math:`\Lambda_v^\mathcal D` always exists, since if there exist at
 least one delta in :math:`\Delta^\mathcal D`, then we can build a delta tree
 with it, otherwise the document was never modified. For example, looking at
 :numref:`delta-tree-nodes`, :math:`\Lambda_v^{\mathcal D_1}` is the tree rooted
-in :math:`\delta_{\texttt{1_m}}^{\mathcal D_3}` that contains 5 nodes
+in :math:`\delta_{\texttt{1\_m}}^{\mathcal D_3}` that contains 5 nodes
 including the root, and :math:`\Lambda_v^{\mathcal D_2}` is the tree rooted in
-:math:`\delta_{\texttt{1_m}}^{\mathcal D_2}` that has two children:
-:math:`\delta_{\texttt{2_m}}^{\mathcal D_2}` and
-:math:`\delta_{\texttt{1_b}}^{\mathcal D_2}`.
+:math:`\delta_{\texttt{1\_m}}^{\mathcal D_2}` that has two children:
+:math:`\delta_{\texttt{2\_m}}^{\mathcal D_2}` and
+:math:`\delta_{\texttt{1\_b}}^{\mathcal D_2}`.
 
 
 Unconnected Document Delta Trees
@@ -451,9 +450,9 @@ delta trees is problematic since we know that all deltas of a document form a
 tree, but the figure for :math:`\mathcal D_3` does not look like a tree since
 the two deltas do not seem to be related, or in other words are unconnected.
 The greyed out nodes that represent versions are added just for context, but
-they give us a hint that version :math:`\texttt{1_m}` somehow relates the deltas
-:math:`\delta_{\texttt{2_m}}^{\mathcal D_3}` and
-:math:`\delta_{\texttt{1_b}}^{\mathcal D_3}`.
+they give us a hint that version :math:`\texttt{1\_m}` somehow relates the deltas
+:math:`\delta_{\texttt{2\_m}}^{\mathcal D_3}` and
+:math:`\delta_{\texttt{1\_b}}^{\mathcal D_3}`.
 
 
 We distinguish two situations that can happen when a delta is created for a
@@ -536,9 +535,9 @@ branches, therefore two separate (root) deltas are registered for that document.
 
 We have already seen this in :numref:`delta-tree-nodes`, for document
 :math:`\mathcal D_3`. In this case we have two seemingly unrelated delta
-trees rooted in :math:`\texttt{2_m}`, i.e.,
-:math:`\Lambda_{\texttt{2_m}}^{\mathcal D_3}` and :math:`\texttt{1_b}`, i.e.,
-:math:`\Lambda_{\texttt{1_b}}^{\mathcal D_3}`.
+trees rooted in :math:`\texttt{2\_m}`, i.e.,
+:math:`\Lambda_{\texttt{2\_m}}^{\mathcal D_3}` and :math:`\texttt{1\_b}`, i.e.,
+:math:`\Lambda_{\texttt{1\_b}}^{\mathcal D_3}`.
 If we modify :math:`\mathcal D_3` again on either of the two existing
 branches, the new created deltas will be added as the children of the
 delta tree for that branch. This means that we can group the unconnected
@@ -592,7 +591,7 @@ a delta is a transition applied to a document to change it so that it aligns
 with the state of the collection in that version (this is how we defined
 deltas previously). Looking back at the example in
 :numref:`delta-tree-nodes`, we see that :math:`\mathcal D_3` was modified in
-versions :math:`\texttt{2_m}` and :math:`\texttt{1_b}`. Remember that we
+versions :math:`\texttt{2\_m}` and :math:`\texttt{1\_b}`. Remember that we
 overloaded the :math:`pred` and :math:`succ` operators for deltas and the way
 we defined what deltas precede each delta is strictly related to the notion
 of predecessor and successor of versions in the log tree :math:`\mathcal L`,
@@ -614,7 +613,7 @@ for which the roots of the unconnected trees are registered.
 Using the example in :numref:`delta-tree-nodes`,
 :numref:`complete-delta-tree` shows the complete delta tree
 :math:`\widetilde {\Delta^{\mathcal D_3}}`, where
-:math:`\texttt{1_m} = LCA(\texttt{2_m}, \texttt{1_b})`. For completeness,
+:math:`\texttt{1\_m} = LCA(\texttt{2\_m}, \texttt{1\_b})`. For completeness,
 Algorithm 1 shows how to compute a complete document delta tree.
 
 .. _algorithm-1:
@@ -767,8 +766,8 @@ Navigating between versions
 Navigating between versions, a.k.a checking out a version is another
 fundamental operations in ``versioned_collection``. Let's look once again at
 :numref:`delta-tree-nodes`, and suppose the current version is
-:math:`v = \texttt{4_m}` and we want to checkout version
-:math:`v' = \texttt{1_b}`. What we want to do is to traverse the version tree
+:math:`v = \texttt{4\_m}` and we want to checkout version
+:math:`v' = \texttt{1\_b}`. What we want to do is to traverse the version tree
 between the two version, and each time we encounter an edge that connects
 versions :math:`v_1` and :math:`v_2` we apply the corresponding deltas
 :math:`\Delta_{\tilde v}` where :math:`\tilde v = v_1` if
@@ -898,7 +897,7 @@ two versions :math:`v` to :math:`v'` after computing the path in the version
 tree between versions.
 
 .. _algorithm-2:
-.. pcode::
+.. pcode:: 
    :linenos:
 
     \begin{algorithm}

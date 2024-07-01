@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 env:
-  PYTHON_VERSION: 3.8
+  PYTHON_VERSION: "3.10"
 
 concurrency:
   group: ${{ github.ref }}-tests
@@ -163,18 +163,6 @@ jobs:
         run: |
           pip -v install -e .
           pip install twine
-
-      #      - uses: aws-actions/configure-aws-credentials@v2
-      #        with:
-      #          aws-region: eu-west-2
-      #          role-to-assume: ${{ secrets.AWS_ROLE_BUILD }}
-      #          role-session-name: build_versioned_collection
-      #
-      #      - name: Build and publish
-      #        run: |
-      #          aws codeartifact login --tool twine --domain humanising --repository research
-      #          python -m build --wheel
-      #          twine upload -r codeartifact dist/*
 
       - name: Generate Cloudsmith Token
         uses: HumanisingAutonomy/ha-foundation-github-actions/generate_cloudsmith_token@v1.22

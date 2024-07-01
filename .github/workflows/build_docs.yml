@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: 3.8
+  PYTHON_VERSION: "3.10"
 
 jobs:
   deploy-docs:

@@ -19,7 +19,7 @@ autodoc_mock_imports = ['pymongo', 'treelib', 'colorama', 'deepdiff', 'bson']
 # -- Project information -----------------------------------------------------
 
 project = 'VersionedCollection'
-copyright = '2023, Humanising Autonomy'
+copyright = '2024, Humanising Autonomy'
 author = 'Humanising Autonomy'
 
 
@@ -44,9 +44,9 @@ release = fetch_version()
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx_rtd_theme',
     'sphinx.ext.viewcode',
     'sphinx.ext.autosectionlabel',
+    'sphinxcontrib.katex',
     'sphinxcontrib.pseudocode',
 ]
 
@@ -63,21 +63,13 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 
 html_theme_options = {
-    'logo_only': False,
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
-    'vcs_pageview_mode': '',
-    'style_nav_header_background': 'white',
-    # Toc options
-    'collapse_navigation': True,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False,
+    "dark_css_variables": {
+        "color-api-name": "#f4c2f0",
+        "color-api-pre-name": "#f4c2f0",
+    },
 }
 
 html_logo = '_static/img/logo.png'

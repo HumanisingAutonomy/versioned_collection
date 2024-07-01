@@ -1,6 +1,8 @@
 versioned\_collection package
 =============================
 
+.. _versioned-collection-api:
+
 .. automodule:: versioned_collection
    :members:
    :undoc-members:

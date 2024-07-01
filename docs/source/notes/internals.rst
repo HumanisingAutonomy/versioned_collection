@@ -11,9 +11,6 @@ A :class:`VersionedCollection` extends a pymongo
 to be able to interact with a mongo server and adds versioning features to it.
 
 
-.. contents:: Contents
-
-
 Top level architecture
 -------------------------
 From the top-level, when a ``VersionedCollection`` object it created, two
