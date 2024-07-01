@@ -141,51 +141,51 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Upgrade environment
-        run: |
-          python3 -m pip install --upgrade pip setuptools build
+      # - name: Upgrade environment
+      #   run: |
+      #     python3 -m pip install --upgrade pip setuptools build
 
-      - name: Get pip cache dir
-        id: pip-cache
-        run: |
-          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+      # - name: Get pip cache dir
+      #   id: pip-cache
+      #   run: |
+      #     echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
-      - name: pip cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py', '**/requirements.txt', '**pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+      # - name: pip cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ${{ steps.pip-cache.outputs.dir }}
+      #     key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py', '**/requirements.txt', '**pyproject.toml') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-pip-
 
-      - name: Install dependencies
-        if: ${{ steps.cache-python.outputs.cache-hit != 'true' }}
-        run: |
-          pip -v install -e .
-          pip install twine
+      # - name: Install dependencies
+      #   if: ${{ steps.cache-python.outputs.cache-hit != 'true' }}
+      #   run: |
+      #     pip -v install -e .
+      #     pip install twine
 
-      - name: Generate Cloudsmith Token
-        uses: HumanisingAutonomy/ha-foundation-github-actions/generate_cloudsmith_token@v1.22
-      - name: Authenticate with Cloudsmith
-        uses: HumanisingAutonomy/ha-foundation-python/github_actions/configure_python_download_cloudsmith_credentials@v0.4.2
-        with:
-          username: sandbox-bot
-          password: ${{env.CLOUDSMITH_API_KEY}}
-          organisation: humanising-autonomy
-          repository_name: ha-sandbox
+      # - name: Generate Cloudsmith Token
+      #   uses: HumanisingAutonomy/ha-foundation-github-actions/generate_cloudsmith_token@v1.22
+      # - name: Authenticate with Cloudsmith
+      #   uses: HumanisingAutonomy/ha-foundation-python/github_actions/configure_python_download_cloudsmith_credentials@v0.4.2
+      #   with:
+      #     username: sandbox-bot
+      #     password: ${{env.CLOUDSMITH_API_KEY}}
+      #     organisation: humanising-autonomy
+      #     repository_name: ha-sandbox
 
-      - name: Configure python publish credentials
-        uses: HumanisingAutonomy/ha-foundation-python/github_actions/configure_python_publish_cloudsmith_credentials@v0.2.2
-        with:
-          organisation: humanising-autonomy
-          repository_name: ha-sandbox
-          username: sandbox-bot
-          password: ${{env.CLOUDSMITH_API_KEY}}
+      # - name: Configure python publish credentials
+      #   uses: HumanisingAutonomy/ha-foundation-python/github_actions/configure_python_publish_cloudsmith_credentials@v0.2.2
+      #   with:
+      #     organisation: humanising-autonomy
+      #     repository_name: ha-sandbox
+      #     username: sandbox-bot
+      #     password: ${{env.CLOUDSMITH_API_KEY}}
 
-      - name: Build (Twine)
-        run: python -m build --wheel
+      # - name: Build (Twine)
+      #   run: python -m build --wheel
 
-      - name: Publish (Twine)
-        env:
-          TWINE_PASSWORD: ${{env.CLOUDSMITH_API_KEY}}
-        run: twine upload -r ha-sandbox dist/*
+      # - name: Publish (Twine)
+      #   env:
+      #     TWINE_PASSWORD: ${{env.CLOUDSMITH_API_KEY}}
+      #   run: twine upload -r ha-sandbox dist/*
