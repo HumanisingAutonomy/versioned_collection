@@ -1,0 +1,36 @@
+name: Tag Version
+description: Compute the next version tag based on the past tags and conventional commit patterns.
+inputs:
+  dry_run:
+    description: Only return the version to be generated without tagging the repository.
+    required: false
+    default: "False"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Calculate new version
+      uses: PaulHatch/semantic-version@v5.4.0
+      id: semantic_version
+      with:
+        major_pattern: /feat\!\(.*\):|\(.*\)\!:/
+        minor_pattern: /feat(\(.*\))?:/
+
+    - name: Tag Repository
+      if: ${{ inputs.dry_run != 'True' }}
+      uses: rickstaa/action-create-tag@v1
+      with:
+        tag: ${{ steps.semantic_version.outputs.version_tag }}
+
+outputs:
+  tag:
+    description: "The string which the repository has been tagged with"
+    value: ${{ steps.semantic_version.outputs.version_tag }}
+  version:
+    description: "The semantic version number"
+    value: ${{ steps.semantic_version.outputs.major }}.${{ steps.semantic_version.outputs.minor  }}.${{ steps.semantic_version.outputs.patch }}

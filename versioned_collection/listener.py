@@ -219,9 +219,8 @@ class CollectionListener:
         listening: Value,
         heartbeat_q: Queue,
         last_timestamp: Queue,
-        lock: Lock
+        lock: Lock,
     ) -> None:
-
         docs = []
         timestamp = None
         batch_size = 100

@@ -1,0 +1,42 @@
+name: versioned_collection Pull Request
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-pr
+  cancel-in-progress: true
+
+# TODO: matrix for all supported python versions
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  generate_tag:
+    name: Generate version tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate version
+        id: tag
+        uses: HumanisingAutonomy/versioned_collection/.github/actions/tag_version@ci-refactor
+        with:
+          dry_run: "True"
+    outputs:
+      version: ${{steps.tag.outputs.version}}
+
+  pr:
+    name: versioned_collection PR
+    runs-on: ubuntu-latest
+    needs: generate_tag
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    steps:
+      - name: Test, Build, Publish
+        uses: HumanisingAutonomy/versioned_collection/.github/actions/test_and_build@ci-refactor
+        with:
+          version: ${{ needs.generate_tag.outputs.version }}
+          is_dev_run: "True"
+          codecov_token: ${{ secrets.CODECOV_TOKEN }}

@@ -25,14 +25,7 @@ author = 'Humanising Autonomy'
 
 # The full version, including alpha/beta/rc tags
 def fetch_version() -> str:
-    import pathlib
-    from configparser import ConfigParser
-    # root directory of the project
-    version_file = pathlib.Path(__file__).parent.parent.parent.resolve()
-    version_file = version_file.joinpath('VERSION')
-    config_file = ConfigParser()
-    config_file.read(version_file)
-    return config_file['version']['number']
+    return os.getenv("VERSION") or "0.0.0"
 
 
 release = fetch_version()

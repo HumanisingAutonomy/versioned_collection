@@ -2,7 +2,11 @@
 
 * The first step to contributing to this project is always [opening an issue](https://github.com/HumanisingAutonomy/versioned_collection/issues/new), with the exception of contributions that improve the clarity of the documentation, or typo fixes, in which case a Pull Request can be opened directly.
 
-* Make sure you add the issue number to the beggining of each commit message, e.g., `git commit -m "(#0123) Commit message"`
+* Make sure you add the issue number to the beginning of each commit message, e.g., `git commit -m "[#0123] fix(scope): Commit message"`.
+
+* Use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)
+
+* Always open the Pull Requests as draft first.
 
 #### **Did you find a bug?**
 
@@ -24,7 +28,7 @@
 
 * Ask any question about how to use versioned_collection by creating a new[support request issue](https://github.com/HumanisingAutonomy/versioned_collection/issues/new?assignees=&labels=&template=support-request.yml).
 
-* If you see that more people struggle with the same thing, because of the lack of examples, or clear documentation, feel free to send a PR that improves the documentation or adds some tutorials or Jupyter Notebooks that do a better job at explaing the problem.
+* If you see that more people struggle with the same thing, because of the lack of examples, or clear documentation, feel free to send a PR that improves the documentation or adds some tutorials or Jupyter Notebooks that do a better job at explaining the problem.
 
 
 Thanks! :heart: :heart: :heart:
