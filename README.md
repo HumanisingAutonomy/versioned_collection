@@ -2,8 +2,7 @@
 
 ----
 
-[![Tests](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/run_tests.yml/badge.svg)](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/run_tests.yml)
-[![Docs](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/build_docs.yml/badge.svg)](https://scaling-adventure-g3g7qpg.pages.github.io/)
+[![Tests](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/run_tests.yml/badge.svg)](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/release.yaml)
 [![codecov](https://codecov.io/github/HumanisingAutonomy/versioned_collection/graph/badge.svg?token=5AS1HJSQAW)](https://codecov.io/github/HumanisingAutonomy/versioned_collection)
 
 Enable collection versioning in MongoDB with `VersionedCollection`. A

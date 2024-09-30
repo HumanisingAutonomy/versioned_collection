@@ -34,6 +34,7 @@ jobs:
       id-token: write
       contents: write
       actions: read
+      pages: write
     steps:
       - name: Test, Build, Publish
         uses: HumanisingAutonomy/versioned_collection/.github/actions/test_and_build@ci-refactor
