@@ -88,11 +88,11 @@ runs:
     - name: Build dev package
       shell: bash
       if: ${{ inputs.is_dev_run == 'True' }}
-      run: nox -s build --  ${{ inputs.version }}.dev${{ github.event.pull_request.number }}
+      run: nox -s build --  --version ${{ inputs.version }}.dev${{ github.event.pull_request.number }}
 
     - name: Build package
       shell: bash
       if: ${{ inputs.is_dev_run == 'False' }}
-      run: nox -s build --  ${{ inputs.version }}.dev${{ github.event.pull_request.number }}
+      run: nox -s build --  --version ${{ inputs.version }}
 
     # TODO: publish to pypi/ cloudsmith. figure out how to deal with the future package name mismatch 
