@@ -4,8 +4,7 @@
 
 [![Tests](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/run_tests.yml/badge.svg)](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/run_tests.yml)
 [![Docs](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/build_docs.yml/badge.svg)](https://scaling-adventure-g3g7qpg.pages.github.io/)
-[![Coverage](https://github.com/HumanisingAutonomy/versioned_collection/blob/ci/coverage_badge/badge.svg)](https://github.com/HumanisingAutonomy/versioned_collection/blob/ci/coverage_badge/badge.svg)
-
+[![codecov](https://codecov.io/github/HumanisingAutonomy/versioned_collection/graph/badge.svg?token=5AS1HJSQAW)](https://codecov.io/github/HumanisingAutonomy/versioned_collection)
 
 Enable collection versioning in MongoDB with `VersionedCollection`. A
 `VersionedCollection` can be used like a normal `pymongo`

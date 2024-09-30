@@ -1,5 +1,9 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel>=0.36.1"]
+requires = [
+    "setuptools>=61.0.0",
+    "wheel>=0.36.1",
+    "setuptools-git-versioning>=2.0,<3",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -34,24 +38,26 @@ authors = [
 ]
 
 [project.optional-dependencies]
-tests = [
-    "coverage[toml]>=7.0.0",
-    "pymongo-inmemory"
-]
-
+build = ["build", "twine", "toml"]
+tests = ["coverage[toml]>=7.0.0", "pymongo-inmemory"]
 lint = [
-  "pyink",
-  "blackdoc",
-  "darglint",
-  "flake8",
-  "flake8-bandit",
-  "flake8-bugbear",
-  "flake8-docstrings",
-  "flake8-isort",
-  "isort",
-  "pep8-naming",
-  "pydocstyle",
-  "restructuredtext_lint"
+    "pyink==23.10.0",
+    "darglint",
+    "flake8",
+    "flake8-bandit",
+    "flake8-bugbear",
+    "flake8-docstrings",
+    "flake8-isort",
+    "isort",
+    "pep8-naming",
+    "pydocstyle",
+    "restructuredtext_lint",
+]
+documentation = [
+    "sphinx~=7.3.0",
+    "furo>=2023.5.20,<2024.6.0",
+    "sphinxcontrib-pseudocode@git+https://github.com/victorapostol/sphinxcontrib-pseudocode",
+    "sphinxcontrib-katex~=0.9",
 ]
 
 [project.urls]
@@ -67,6 +73,10 @@ exclude = ["tests*"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools-git-versioning]
+enabled = true
+
 
 [tool.black]
 line-length = 80

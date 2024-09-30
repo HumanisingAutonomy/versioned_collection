@@ -1,4 +1,5 @@
 name-template: 'VersionedCollection v$RESOLVED_VERSION'
+
 categories:
   - title: '🚀 Features'
     labels:
@@ -16,8 +17,30 @@ categories:
     collapse-after: 3
     labels:
       - 'dependencies'
+
 change-template: '- $TITLE (#$NUMBER)'
 change-title-escapes: '\<*_&'
+
+autolabeler:
+  - label: 'bump:major'
+    title:
+      - /feat!(\(.*\))?:/
+      - /feat(\(.*\))?!:/
+
+  - label: 'bump:minor'
+    title:
+      - /feat(\(.*\))?:/
+  
+  - label: 'bump:patch'
+    title:
+      - /fix|ci|docs|perf|refactor|style(\(.*\))?:/
+
+  - label: 'dependencies'
+    files:
+      - '**requirements.txt'
+    title:
+      - /chore\(deps\):/
+
 version-resolver:
   major:
     labels:

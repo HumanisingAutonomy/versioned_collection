@@ -1,0 +1,98 @@
+name: Test, Build, Publish
+description: Run tests, build the package and documentation and publish the python package.
+inputs:
+  version:
+    description: The semantic version number used to build the packages. 
+    default: "0.0.0"
+    required: true
+  is_dev_run:
+    description: Whether is run from a PR or Release action.
+    default: "False"
+    required: false
+  codecov_token:
+    description: Token used to publish the coverage report to CodeCov
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      id: setup-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Upgrade environment
+      shell: bash
+      run: |
+        python3 -m pip install --upgrade pip setuptools wheel nox toml
+
+    - name: Get pip cache dir
+      id: pip-cache
+      shell: bash
+      run: |
+        echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+    - name: pip cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**pyproject.toml') }}
+        restore-keys: ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      if: ${{ steps.cache-python.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        nox -s install
+
+    - name: Test CLI installation
+      shell: bash
+      run: |
+        result=$(vc --version)
+        value=$(python -c "import versioned_collection; print(versioned_collection.__version__)")
+        version_number=${value//[[:space:]]/}
+        expected="versioned_collection: "$version_number
+        if [[ "$result" != "$expected" ]]; then
+          exit 1
+        fi
+
+    - name: Lint
+      shell: bash
+      run: nox -s lint
+
+    - name: Start MongoDB
+      uses: supercharge/mongodb-github-action@1.8.0
+      with:
+        mongodb-version: 5.0
+        mongodb-replica-set: test-rs
+
+    - name: Run Tests
+      shell: bash
+      run: nox -s tests
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4.2.0
+      env:
+        CODECOV_TOKEN: ${{ inputs.codecov_token }}
+
+    - name: Documentation build test
+      shell: bash
+      run: |
+        nox -s docs -- --version ${{ inputs.version }}
+
+    - name: Build dev package
+      shell: bash
+      if: ${{ inputs.is_dev_run == 'True' }}
+      run: nox -s build --  ${{ inputs.version }}.dev${{ github.event.pull_request.number }}
+
+    - name: Build package
+      shell: bash
+      if: ${{ inputs.is_dev_run == 'False' }}
+      run: nox -s build --  ${{ inputs.version }}.dev${{ github.event.pull_request.number }}
+
+    # TODO: publish to pypi/ cloudsmith. figure out how to deal with the future package name mismatch 
