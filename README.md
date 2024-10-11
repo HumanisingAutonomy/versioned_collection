@@ -2,7 +2,7 @@
 
 ----
 
-[![Tests](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/run_tests.yml/badge.svg)](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/release.yaml)
+[![Tests](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/release.yml/badge.svg)](https://github.com/HumanisingAutonomy/versioned_collection/actions/workflows/release.yaml)
 [![codecov](https://codecov.io/github/HumanisingAutonomy/versioned_collection/graph/badge.svg?token=5AS1HJSQAW)](https://codecov.io/github/HumanisingAutonomy/versioned_collection)
 [![Documentation](https://readthedocs.org/projects/versioned-collection/badge/?version=latest)](https://versioned-collection.readthedocs.io/latest/)
 

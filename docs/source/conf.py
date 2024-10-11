@@ -38,7 +38,7 @@ def fetch_version() -> str:
     if len(repo.tags):
         return str(next(reversed(repo.tags)))
 
-    return "v0.0.0"
+    return ""
 
 
 release = fetch_version()
