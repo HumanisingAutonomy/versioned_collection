@@ -58,6 +58,7 @@ documentation = [
     "furo>=2023.5.20,<2024.6.0",
     "sphinxcontrib-pseudocode@git+https://github.com/victorapostol/sphinxcontrib-pseudocode",
     "sphinxcontrib-katex~=0.9",
+    "GitPython~=3.1.0",
 ]
 
 [project.urls]

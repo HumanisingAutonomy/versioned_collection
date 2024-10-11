@@ -15,7 +15,9 @@ import sys
 
 import git
 
-sys.path.insert(0, os.path.abspath('../..'))
+PROJECT_ROOT = "../.."
+
+sys.path.insert(0, os.path.abspath(PROJECT_ROOT))
 autodoc_mock_imports = ['pymongo', 'treelib', 'colorama', 'deepdiff', 'bson']
 
 # -- Project information -----------------------------------------------------
@@ -27,10 +29,12 @@ author = 'Humanising Autonomy'
 
 # The full version, including alpha/beta/rc tags
 def fetch_version() -> str:
+    # When using nox, `VERSION` is exported to the environment
     if env_version := os.getenv("VERSION"):
         return f"v{env_version}"
 
-    repo = git.Repo(".")
+    # for ReadTheDocs
+    repo = git.Repo(PROJECT_ROOT)
     if len(repo.tags):
         return str(next(reversed(repo.tags)))
 
