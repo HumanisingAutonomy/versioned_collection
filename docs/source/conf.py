@@ -29,11 +29,11 @@ author = 'Humanising Autonomy'
 def fetch_version() -> str:
     if env_version := os.getenv("VERSION"):
         return f"v{env_version}"
-    
+
     repo = git.Repo(".")
     if len(repo.tags):
         return str(next(reversed(repo.tags)))
-    
+
     return "v0.0.0"
 
 
