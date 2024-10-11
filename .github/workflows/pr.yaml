@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Generate version
         id: tag
-        uses: HumanisingAutonomy/versioned_collection/.github/actions/tag_version@ci-refactor
+        uses: HumanisingAutonomy/versioned_collection/.github/actions/tag_version@main
         with:
           dry_run: "True"
     outputs:
@@ -35,7 +35,7 @@ jobs:
       actions: read
     steps:
       - name: Test, Build, Publish
-        uses: HumanisingAutonomy/versioned_collection/.github/actions/test_and_build@ci-refactor
+        uses: HumanisingAutonomy/versioned_collection/.github/actions/test_and_build@main
         with:
           version: ${{ needs.generate_tag.outputs.version }}
           is_dev_run: "True"

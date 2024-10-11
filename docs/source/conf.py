@@ -13,6 +13,8 @@
 import os
 import sys
 
+import git
+
 sys.path.insert(0, os.path.abspath('../..'))
 autodoc_mock_imports = ['pymongo', 'treelib', 'colorama', 'deepdiff', 'bson']
 
@@ -25,7 +27,14 @@ author = 'Humanising Autonomy'
 
 # The full version, including alpha/beta/rc tags
 def fetch_version() -> str:
-    return os.getenv("VERSION") or "0.0.0"
+    if env_version := os.getenv("VERSION"):
+        return f"v{env_version}"
+    
+    repo = git.Repo(".")
+    if len(repo.tags):
+        return str(next(reversed(repo.tags)))
+    
+    return "v0.0.0"
 
 
 release = fetch_version()
