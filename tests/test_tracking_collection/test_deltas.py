@@ -16,7 +16,7 @@ from versioned_collection.collection.tracking_collections import DeltasCollectio
 def _get_timestamp():
     # bson stores date times up to millisecond precision, so chop of the
     # nanoseconds
-    timestamp = datetime.datetime.utcnow()
+    timestamp = datetime.datetime.now()
     timestamp = datetime.datetime.fromisoformat(
         timestamp.isoformat(timespec='milliseconds')
     )
@@ -90,7 +90,7 @@ class TestDeltasCollectionIntegration(InMemoryDatabaseSetup):
             document_id=self.doc['_id'],
             collection_version=1,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             branch_history=[],
         )
         self.assertIsNone(delta_id)

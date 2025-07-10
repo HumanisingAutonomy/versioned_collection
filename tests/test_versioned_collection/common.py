@@ -1,3 +1,4 @@
+import os
 from time import sleep
 from typing import List
 from unittest import TestCase
@@ -27,13 +28,21 @@ class User(VersionedCollection):
         return super().diff(*args, **kwargs)
 
 
+def _fetch_connection_string() -> str:
+    username = os.getenv("VC_MONGO_USER", "")
+    password = os.getenv("VC_MONGO_PASSWORD", "")
+    credentials = f"{username}:{password}@" if len(username) else ""
+    host = "localhost"
+    port = 27017
+    return f"mongodb://{credentials}{host}:{port}"
+
+
 class _BaseTest(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
         super(_BaseTest, cls).setUpClass()
-        conn_str = "mongodb://localhost:27017"
-        connection = MongoClient(conn_str)
+        connection = MongoClient(_fetch_connection_string())
         _database_name = "__test__db"
         cls.database = connection[_database_name]
         cls._database_name = _database_name
@@ -55,7 +64,7 @@ class _RemoteBaseTest(TestCase):
     def setUpClass(cls) -> None:
         # TODO: move to `mongomock`
         super(_RemoteBaseTest, cls).setUpClass()
-        conn_str = "mongodb://localhost:27017"
+        conn_str = _fetch_connection_string()
         connection_local = MongoClient(conn_str)
         cls.db_local = connection_local["__test__db_local"]
         connection_remote = MongoClient(conn_str)

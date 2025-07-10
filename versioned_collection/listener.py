@@ -1,5 +1,5 @@
 import queue
-from datetime import datetime
+import datetime
 from multiprocessing import Process, Value, Queue, Lock
 from time import sleep
 from typing import Optional, Tuple
@@ -27,7 +27,7 @@ class CollectionListener:
         collection_name: str,
         host: str = 'localhost',
         port: int = 27017,
-        credentials: Tuple[Optional[str], Optional[str]] = None,
+        credentials: Optional[Tuple[Optional[str], Optional[str]]] = None,
     ) -> None:
         """Initialise a  :class:`CollectionListener`.
 
@@ -90,7 +90,7 @@ class CollectionListener:
             return
 
         with self._lock:
-            timestamp = datetime.utcnow()
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
             self._listening.value = False
             self._timestamp_q.put(timestamp)
 
@@ -189,28 +189,29 @@ class CollectionListener:
             password=password,
             directConnection=True,
         )
-        target_collection = client[database_name][collection_name]
+        with client:
+            target_collection = client[database_name][collection_name]
 
-        _output_collection = ModifiedCollection(
-            database=client[database_name],
-            parent_collection_name=collection_name,
-        )
+            _output_collection = ModifiedCollection(
+                database=client[database_name],
+                parent_collection_name=collection_name,
+            )
 
-        with target_collection.watch() as change_stream:
-            listening.value = True
-            try:
-                CollectionListener.__listen(
-                    change_stream=change_stream,
-                    output_collection=_output_collection,
-                    listening=listening,
-                    heartbeat_q=heartbeat_q,
-                    last_timestamp=last_timestamp,
-                    lock=lock,
-                )
-            except KeyboardInterrupt:
-                # Gracefully exit. The synchronisation with the main process is
-                # done in :meth:`stop`.
-                pass
+            with target_collection.watch() as change_stream:
+                listening.value = True
+                try:
+                    CollectionListener.__listen(
+                        change_stream=change_stream,
+                        output_collection=_output_collection,
+                        listening=listening,
+                        heartbeat_q=heartbeat_q,
+                        last_timestamp=last_timestamp,
+                        lock=lock,
+                    )
+                except KeyboardInterrupt:
+                    # Gracefully exit. The synchronisation with the main process
+                    # is done in :meth:`stop`.
+                    pass
 
     @staticmethod
     def __listen(

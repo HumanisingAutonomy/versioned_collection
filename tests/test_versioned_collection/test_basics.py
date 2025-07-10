@@ -1,6 +1,10 @@
+import os
+from unittest import mock
+
 import pymongo
 
 from tests.test_versioned_collection.common import _BaseTest
+from versioned_collection import VersionedCollection
 
 
 class TestVersionedCollectionBasics(_BaseTest):
@@ -132,3 +136,23 @@ class TestVersionedCollectionBasics(_BaseTest):
         out = self.user_collection.aggregate_raw_batches([{'$match': {}}])
         self.assertFalse(self.user_collection.has_changes())
         self.assertEqual(1, len(list(out)))  # this is 1 batch
+
+
+class AuthTest(_BaseTest):
+
+    @mock.patch.dict(
+        os.environ,
+        {
+            "VC_MONGO_USER": "mongo",
+            "VC_MONGO_PASSWORD": "pswd",
+        },
+    )
+    def test_uses_env_variables_if_defined(self):
+        collection = VersionedCollection(self.database, "User")
+
+        # FIXME: forgive me lord for i have sinned
+        user, password = collection.__dict__[
+            '_VersionedCollection__credentials'
+        ]
+        self.assertEqual(user, "mongo")
+        self.assertEqual(password, "pswd")
