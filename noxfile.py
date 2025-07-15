@@ -13,8 +13,6 @@ nox.options.sessions = [
     "tests",
     "docs(docs_format='html')",
 ]
-main_version = ["3.10"]
-supported_versions = main_version + []
 
 
 @nox.session(python=False)

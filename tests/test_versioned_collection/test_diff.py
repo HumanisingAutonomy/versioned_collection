@@ -117,18 +117,25 @@ class TestVersionedCollectionDiff(_BaseTest):
         self.user_collection.update_one(
             {'_id': self.DOCUMENT['_id']}, {"$set": {'field_2': 'value_2'}}
         )
+        diff_doc2 = {'field_1': 'value_1'}
         self.user_collection.update_one(
-            {'_id': self.DOCUMENT2['_id']}, {"$set": {'field_1': 'value_1'}}
+            {'_id': self.DOCUMENT2['_id']}, {"$set": diff_doc2}
         )
 
         diffs = self.user_collection.diff(0, direction='to', deep=True)
         self.assertEqual(2, len(diffs))
         diff1 = diffs[self.DOCUMENT['_id']]
         diff2 = diffs[self.DOCUMENT2['_id']]
+
         self.assertIn('dictionary_item_removed', diff1)
         self.assertEqual(2, len(diff1['dictionary_item_removed']))  # noqa
-        self.assertIn('dictionary_item_removed', diff2)
-        self.assertEqual(4, len(diff2['dictionary_item_removed']))  # noqa
+        self.assertIn('values_changed', diff2)
+
+        root2 = diff2["values_changed"]["root"]
+        self.assertEqual(root2["new_value"], dict())
+        new_doc = self.DOCUMENT2.copy()
+        new_doc.update(diff_doc2)
+        self.assertEqual(root2["old_value"], new_doc)
 
     def test_diff_ignores_no_ops(self):
         self.user_collection.init()
@@ -168,12 +175,20 @@ class TestVersionedCollectionDiff(_BaseTest):
                 diff_f = diff_forward[obj_id]
                 diff_b = diff_backward[obj_id]
 
-                self.assertIn('dictionary_item_removed', diff_f)
-                self.assertIn('dictionary_item_added', diff_b)
-                self.assertEqual(
-                    diff_f['dictionary_item_removed'],  # noqa
-                    diff_b['dictionary_item_added'],  # noqa
-                )
+                if "values_changed" in diff_f and "values_changed" in diff_b:
+                    self.assertEqual(
+                        diff_f['values_changed']['root']['new_value'], {}
+                    )
+                    self.assertEqual(
+                        diff_b['values_changed']['root']['old_value'], {}
+                    )
+                else:
+                    self.assertIn('dictionary_item_removed', diff_f)
+                    self.assertIn('dictionary_item_added', diff_b)
+                    self.assertEqual(
+                        diff_f['dictionary_item_removed'],
+                        diff_b['dictionary_item_added'],
+                    )
 
     def test_diff_direction(self):
         self.user_collection.init()
@@ -188,8 +203,16 @@ class TestVersionedCollectionDiff(_BaseTest):
 
         diff_0_1 = diff_0_1[self.DOCUMENT['_id']]
         diff_1_0 = diff_1_0[self.DOCUMENT['_id']]
-        self.assertIn('dictionary_item_added', diff_0_1)
-        self.assertIn('dictionary_item_removed', diff_1_0)
+
+        self.assertIn('values_changed', diff_0_1)
+        root_0_1 = diff_0_1["values_changed"]["root"]
+        self.assertEqual(root_0_1["old_value"], dict())
+        self.assertEqual(root_0_1["new_value"], self.DOCUMENT)
+
+        self.assertIn('values_changed', diff_1_0)
+        root_1_0 = diff_1_0["values_changed"]["root"]
+        self.assertEqual(root_1_0["new_value"], dict())
+        self.assertEqual(root_1_0["old_value"], self.DOCUMENT)
 
     def test_bidirectional_diff(self):
         self.user_collection.init()
