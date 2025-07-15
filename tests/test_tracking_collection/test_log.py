@@ -21,7 +21,7 @@ class TestLogSchema(TestCase):
         self.entry = LogsCollection.SCHEMA(
             version=0,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='Some message',
             prev=None,
             next=[ObjectId(), ObjectId()],
@@ -117,7 +117,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
 
     def test_build_creates_a_log_entry(self):
         col = self._get_collection()
-        timestamp = datetime.datetime.utcnow()
+        timestamp = datetime.datetime.now(datetime.timezone.utc)
         message = 'Test initial version.'
         _id = ObjectId()
 
@@ -147,7 +147,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             _id=root_id,
             version=0,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='root',
             prev=None,
             next=[child_id],
@@ -156,7 +156,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             _id=child_id,
             version=1,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='v1',
             prev=root_id,
             next=[],
@@ -165,7 +165,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
         e3 = dict(
             version=2,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='v2',
             prev=None,
             next=[],
@@ -186,7 +186,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
         e1 = dict(
             version=0,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='root',
             prev=None,
             next=[child_id],
@@ -195,7 +195,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             _id=child_id,
             version=1,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='v1',
             prev=ObjectId(),
             next=[],
@@ -213,7 +213,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
         entry = dict(
             version=0,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='root',
             prev=ObjectId(),
             next=[],
@@ -235,7 +235,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             _id=root_id,
             version=0,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='root',
             prev=None,
             next=[child_1_id, child_2_id],
@@ -244,7 +244,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             _id=child_1_id,
             version=1,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='v1',
             prev=root_id,
             next=[],
@@ -253,7 +253,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             _id=child_2_id,
             version=0,
             branch='branch',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='other branch',
             prev=root_id,
             next=[],
@@ -351,7 +351,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             _id=root_id,
             version=0,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='root',
             prev=None,
             next=[child_id],
@@ -360,7 +360,7 @@ class TestLogCollectionBasics(InMemoryDatabaseSetup):
             _id=child_id,
             version=1,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='v1',
             prev=root_id,
             next=[root_id],
@@ -414,7 +414,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             _id=root_id,
             version=0,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='root',
             prev=None,
             next=[v1_main_id, v0_b1_id],
@@ -423,7 +423,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             _id=v1_main_id,
             version=1,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='v1',
             prev=root_id,
             next=[v2_main_id, v0_b2_id, v0_b3_id],
@@ -432,7 +432,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             _id=v2_main_id,
             version=2,
             branch='main',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='v2',
             prev=v1_main_id,
             next=[],
@@ -441,7 +441,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             _id=v0_b1_id,
             version=0,
             branch='b1',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='a branch',
             prev=root_id,
             next=[],
@@ -450,7 +450,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             _id=v0_b2_id,
             version=0,
             branch='b2',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='another branch',
             prev=v1_main_id,
             next=[],
@@ -459,7 +459,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             _id=v0_b3_id,
             version=0,
             branch='b3',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='yet another branch',
             prev=v1_main_id,
             next=[v1_b3_id, v0_b4_id],
@@ -468,7 +468,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             _id=v1_b3_id,
             version=1,
             branch='b3',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='some version on yet another branch',
             prev=v0_b3_id,
             next=[],
@@ -477,7 +477,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             _id=v0_b4_id,
             version=0,
             branch='b4',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             message='yet some other branch',
             prev=v0_b3_id,
             next=[],
@@ -747,7 +747,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
                 previous_branch='b1',
                 current_branch='b1',
                 message='this will not be recorded',
-                timestamp=datetime.datetime.utcnow(),
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
             )
 
     @patch.object(pymongo.collection.Collection, 'insert_one')
@@ -762,7 +762,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             previous_branch='main',
             current_branch='b5',
             message='first version on b5',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             with_id=ObjectId(),
         )
         inserted_result_mock = MagicMock()
@@ -796,7 +796,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             previous_branch=None,
             current_branch='main',
             message='root',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             with_id=ObjectId(),
         )
 
@@ -825,7 +825,7 @@ class TestLogsCollection(InMemoryDatabaseSetup):
             previous_branch=None,
             current_branch='b4',
             message='a version',
-            timestamp=datetime.datetime.utcnow(),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
             with_id=ObjectId(),
         )
         inserted_result_mock = MagicMock()

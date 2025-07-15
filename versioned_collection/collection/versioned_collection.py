@@ -167,11 +167,19 @@ class VersionedCollection(Collection):
         :param name: The name of the collection. If not given, it will
             default to the lower-cased class name.
         :param username: The name of a user that has access to `database`.
+            If not provided, it checks the environment variable
+            ``VC_MONGO_USER`` and tries to fetch the username from it.
         :param password: The password of a user that has access to `database`.
+            If not provided, it checks the environment variable
+            ``VC_MONGO_PASSWORD`` and tries to fetch the username from it.
         """
         if name is None:
             name = type(self).__name__.lower()
         super(VersionedCollection, self).__init__(database, name, **kwargs)
+
+        username = username or os.getenv("VC_MONGO_USER", None)
+        password = password or os.getenv("VC_MONGO_PASSWORD", None)
+
         self.__credentials = username, password
         self.__kwargs = kwargs
 
@@ -772,7 +780,7 @@ class VersionedCollection(Collection):
             self._clear_changes()
             return False
 
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
 
         register_fn = partial(
             self._register_chunk,
@@ -871,46 +879,46 @@ class VersionedCollection(Collection):
         :return: ``True`` if at least one delta has been registered,
             ``False`` otherwise.
         """
-        client = MongoClient(
+        with MongoClient(
             host=address[0],
             port=int(address[1]),
             username=credentials[0],
             password=credentials[1],
             directConnection=True,
-        )
-        database = client[database_name]
+        ) as client:
+            database = client[database_name]
 
-        replica_collection = ReplicaCollection(database, coll_name)
-        this_collection = Collection(database, coll_name)
-        deltas_collection = DeltasCollection(database, coll_name)
-        modified_collection = ModifiedCollection(database, coll_name)
+            replica_collection = ReplicaCollection(database, coll_name)
+            this_collection = Collection(database, coll_name)
+            deltas_collection = DeltasCollection(database, coll_name)
+            modified_collection = ModifiedCollection(database, coll_name)
 
-        tracker_ids = list()
-        has_registered_deltas = False
-        for tracker_doc in modified_tracker_docs:
-            # Retrieve the documents
-            replica_doc = replica_collection.find_one(
-                {'_id': tracker_doc['_id']}
-            )
-            # If not found it was freshly added
-            replica_doc = {} if replica_doc is None else replica_doc
-            this_doc = this_collection.find_one({'_id': tracker_doc['_id']})
-            # If not found it was deleted since last version
-            this_doc = {} if this_doc is None else this_doc
+            tracker_ids = list()
+            has_registered_deltas = False
+            for tracker_doc in modified_tracker_docs:
+                # Retrieve the documents
+                replica_doc = replica_collection.find_one(
+                    {'_id': tracker_doc['_id']}
+                )
+                # If not found it was freshly added
+                replica_doc = {} if replica_doc is None else replica_doc
+                this_doc = this_collection.find_one({'_id': tracker_doc['_id']})
+                # If not found it was deleted since last version
+                this_doc = {} if this_doc is None else this_doc
 
-            res = deltas_collection.add_delta(
-                document_old=replica_doc,
-                document_new=this_doc,
-                document_id=tracker_doc['_id'],
-                collection_version=version,
-                branch=branch,
-                timestamp=timestamp,
-                branch_history=logs,
-            )
-            tracker_ids.extend(tracker_doc['tracker_ids'])
-            has_registered_deltas = has_registered_deltas or res is not None
+                res = deltas_collection.add_delta(
+                    document_old=replica_doc,
+                    document_new=this_doc,
+                    document_id=tracker_doc['_id'],
+                    collection_version=version,
+                    branch=branch,
+                    timestamp=timestamp,
+                    branch_history=logs,
+                )
+                tracker_ids.extend(tracker_doc['tracker_ids'])
+                has_registered_deltas = has_registered_deltas or res is not None
 
-        modified_collection.delete_modified(tracker_ids)
+            modified_collection.delete_modified(tracker_ids)
         return has_registered_deltas
 
     @_synchronize

@@ -236,7 +236,9 @@ class LogsCollection(_BaseTrackerCollection):
         self._levels = dict()
         message = "Initial collection." if message is None else message
         timestamp = (
-            datetime.datetime.utcnow() if timestamp is None else timestamp
+            datetime.datetime.now(datetime.timezone.utc)
+            if timestamp is None
+            else timestamp
         )
 
         self.add_log_entry(
