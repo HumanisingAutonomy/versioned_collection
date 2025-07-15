@@ -12,6 +12,9 @@ inputs:
   codecov_token:
     description: Token used to publish the coverage report to CodeCov
     required: true
+  python_version:
+    description: The python version to run on
+    required: true
 
 runs:
   using: composite
@@ -24,7 +27,7 @@ runs:
       id: setup-python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version: ${{ inputs.python_version }}
 
     - name: Upgrade environment
       shell: bash
